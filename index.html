@@ -611,7 +611,7 @@ async function handleJoin() {
 // ---------- 체험학습 화면 ----------
 async function openEvent(id, keepTab) {
   cur = events.find(e => e.id === id);
-  if (!keepTab) { tab = 'pre'; loadFilter(); }
+  if (!keepTab) { tab = autoTab(cur); loadFilter(); }
   // 예전에 만든 체험학습: 함께하는 선생님 명단과 반 구성을 채워 둠
   if (cur.owner === user.uid && (!cur.members || !cur.members.length)) {
     cur.members = [user.uid]; cur.memberNames = { ...(cur.memberNames || {}), [user.uid]: myName() };
@@ -639,6 +639,12 @@ async function openEvent(id, keepTab) {
   if (cur && cur.id === id) renderEvent();
 }
 
+// 휴대폰에서는 날짜에 따라 처음 보이는 탭: 출발 전 사전, 체험학습 중 당일, 다녀온 뒤 사후
+function autoTab(e) {
+  if (!window.matchMedia || !matchMedia('(max-width:640px)').matches) return 'pre';
+  const t = today(), a = parseD(e.date), b = parseD(e.endDate || e.date);
+  return t < a ? 'pre' : t > b ? 'post' : 'day';
+}
 function setNav(inEvent) {
   document.body.classList.toggle('in-event', inEvent);
   $('#tabbar').hidden = !inEvent;
