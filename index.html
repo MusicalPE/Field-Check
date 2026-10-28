@@ -161,6 +161,15 @@ h2{font-family:var(--f-display);font-weight:400;font-size:28px;margin:0;color:va
 .cols{display:grid;grid-template-columns:1fr;gap:4px 22px;align-items:start}
 @media (min-width:1000px){.cols{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
 .sec{margin-bottom:22px;min-width:0}
+@media (max-width:640px){
+  .sec>h3,.sec>.rowb>h3{cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none}
+  .sec>.rowb>h3{display:flex;align-items:center;gap:8px}
+  .sec>h3::after,.sec>.rowb>h3::after{content:"";flex:none;width:8px;height:8px;border-right:2.5px solid currentColor;border-bottom:2.5px solid currentColor;transform:translateY(-3px) rotate(45deg);margin-left:6px;opacity:.45;transition:transform .2s}
+  .sec.fold>h3::after,.sec.fold>.rowb>h3::after{transform:rotate(-45deg)}
+  .sec.fold>:not(:first-child){display:none!important}
+  .sec.fold{margin-bottom:10px}
+  .sec.fold>h3,.sec.fold>.rowb{margin-bottom:0}
+}
 .sec>h3,.sec h3.st{font-family:var(--f-display);font-weight:400;font-size:24px;margin:0 0 10px;display:flex;align-items:center;gap:8px;color:var(--pri)}
 .sec .rowb h3{font-family:var(--f-display);font-weight:400;font-size:24px!important;color:var(--pri)}
 
@@ -1960,6 +1969,29 @@ function planQR() {
 }
 
 if (/KAKAOTALK/i.test(navigator.userAgent)) setTimeout(() => toast('카카오톡 안에서는 로그인이 안 돼요. 기본 브라우저로 열고 있어요. 안 열리면 오른쪽 위 [⋮] → [다른 브라우저로 열기]를 눌러 주세요.'), 900);
+// ---------- 모바일: 섹션 제목을 누르면 접기 ----------
+const FOLD_MQ = matchMedia('(max-width:640px)');
+const foldKey = h => (h.firstChild && h.firstChild.textContent || h.textContent).trim();
+function loadFolds() { try { return new Set(JSON.parse(localStorage.getItem('fc-fold') || '[]')); } catch (e) { return new Set(); } }
+function applyFolds() {
+  const f = loadFolds();
+  document.querySelectorAll('#main .sec').forEach(sec => {
+    const h = sec.querySelector(':scope>h3, :scope>.rowb>h3'); if (!h) return;
+    sec.classList.toggle('fold', f.has(foldKey(h)));
+  });
+}
+document.addEventListener('click', ev => {
+  if (!FOLD_MQ.matches) return;
+  const h = ev.target.closest('.sec>h3, .sec>.rowb>h3');
+  if (!h || ev.target.closest('button,a,input,select')) return;
+  const f = loadFolds(), k = foldKey(h);
+  if (f.has(k)) f.delete(k); else f.add(k);
+  try { localStorage.setItem('fc-fold', JSON.stringify([...f])); } catch (e) {}
+  h.closest('.sec').classList.toggle('fold', f.has(k));
+});
+let foldRaf = 0;
+new MutationObserver(() => { if (!foldRaf) foldRaf = requestAnimationFrame(() => { foldRaf = 0; applyFolds(); }); }).observe(document.getElementById('main'), { childList: true, subtree: true });
+
 // ---------- 선생님끼리 자료 공유 ----------
 const SHARE_PARTS = [
   ['tasks', '업무 일정표'], ['plans', '일정표·날씨 지역'], ['safety', '안전 교육'], ['studentPack', '학생 준비물'],
