@@ -5,7 +5,7 @@ const FCAI = window.FCAI = { state: 'loading', why: '', ask: null, errorText: nu
 const ERR = e => {
   const m = String(e && e.message || e);
   if (/app.?check|attestation|recaptcha/i.test(m)) return 'App Check 설정을 확인해 주세요 (설정_안내.txt의 AI 단계)';
-  if (/quota|429|exhausted|rate/i.test(m)) return 'AI 사용량이 잠깐 넘쳤어요. 1~2분 뒤 다시 해 보세요';
+  if (/quota|\b429\b|exhausted|rate.?limit|too many requests/i.test(m)) return 'AI 사용량이 잠깐 넘쳤어요. 1~2분 뒤 다시 해 보세요 (' + m.slice(0, 80) + ')';
   if (/api.*not.*enabled|403|permission|billing/i.test(m)) return 'AI Logic이 켜져 있는지 확인해 주세요 (설정_안내.txt의 AI 단계)';
   if (/fetch|network|Failed to/i.test(m)) return '인터넷 연결을 확인해 주세요';
   return 'AI가 답하지 못했어요: ' + m.slice(0, 120);
@@ -44,7 +44,9 @@ function parseJSON(text) {
           } catch (e) {
             last = e; const m = String(e && e.message || e);
             if (useThink && /think|budget|invalid argument|400/i.test(m)) { think = false; continue; }
-            if (!/not found|404|not supported|unsupported|is not available|invalid model/i.test(m)) throw e;
+            // 모델이 없거나, 그 모델의 무료 사용량이 찼으면 다음 모델로
+            if (!/not found|\b404\b|not supported|unsupported|is not available|invalid model|quota|\b429\b|exhausted|rate.?limit|too many requests/i.test(m)) throw e;
+            console.warn('AI 모델 건너뜀:', name, m);
             break;
           }
         }
