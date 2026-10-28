@@ -21,6 +21,14 @@
   .vid{position:relative;width:100%;aspect-ratio:16/9;border-radius:12px;overflow:hidden;background:#000;margin-bottom:10px}
   .vid iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
   .link{display:block;text-align:center;background:var(--pri-soft);color:var(--pri);font-weight:700;border-radius:12px;padding:14px;text-decoration:none;margin-bottom:10px}
+  .vblock{margin-bottom:12px}
+  .wbar{height:10px;background:#e3e7ef;border-radius:99px;overflow:hidden}
+  .wbar i{display:block;height:100%;background:var(--acc);transition:.3s}
+  .wbar i.ok{background:var(--ok)}
+  .wtxt{font-size:13px;color:var(--sub);margin-top:5px}
+  .wtxt.ok{color:var(--ok);font-weight:700}
+  .conf{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:15px;font-weight:700}
+  .conf input{width:22px;height:22px;accent-color:var(--ok)}
   .memo{font-size:14px;color:var(--sub);margin:0}
   .places{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
   .pl{border:2px solid var(--line);background:#fff;border-radius:14px;padding:12px 4px;font:inherit;font-size:14px;cursor:pointer;white-space:nowrap;color:var(--ink)}
@@ -92,56 +100,150 @@ async function boot() {
   }
 }
 
+// ---- 영상 시청 확인 ----
+// 유튜브 영상은 실제로 재생된 초만 셉니다. 앞으로 건너뛴 부분은 들어가지 않아요.
+const NEED = 0.9;
+const requireWatch = () => sf.requireWatch !== false;
+let vids = [];   // {url, yt, watched:Set, dur, pct, confirmed, player, failed}
+const vKey = i => KEY + '-v' + i;
+function loadWatched(i) { try { return new Set(JSON.parse(localStorage.getItem(vKey(i))) || []); } catch (e) { return new Set(); } }
+function saveWatched(v, i) { try { localStorage.setItem(vKey(i), JSON.stringify([...v.watched])); } catch (e) {} }
+const vidOk = v => !requireWatch() || (v.yt && !v.failed ? v.pct >= NEED : v.confirmed);
+const allWatched = () => vids.every(vidOk);
+
 function render() {
   document.title = sf.title;
-  const videos = sf.videos.map((v, i) => {
-    const id = ytId(v);
-    return id
-      ? `<div class="vid"><iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}?rel=0" title="안전 교육 영상 ${i + 1}" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen></iframe></div>`
-      : `<a class="link" href="${esc(v)}" target="_blank" rel="noopener">영상 ${sf.videos.length > 1 ? i + 1 + ' ' : ''}보러 가기</a>`;
+  vids = sf.videos.map((url, i) => ({ url, yt: ytId(url), watched: loadWatched(i), dur: 0, pct: 0, confirmed: false, failed: false }));
+  const blocks = vids.map((v, i) => {
+    const label = vids.length > 1 ? `영상 ${i + 1}` : '영상';
+    const linkBox = `<a class="link" href="${esc(v.url)}" target="_blank" rel="noopener">${label} 보러 가기</a>`;
+    return `<div class="vblock" id="vb-${i}">
+      ${v.yt ? `<div class="vid"><div id="pl-${i}"></div></div>` : linkBox}
+      <div class="vstat" id="vs-${i}"></div></div>`;
   }).join('');
-  let checkPart;
+  app.innerHTML = `
+    <div class="top"><div class="ev">${esc(sf.eventTitle || '')}</div><h1>${esc(sf.title)}</h1>
+      <p>영상을 끝까지 보고, 아래에서 시청 체크를 해 주세요.</p></div>
+    <div class="card"><span class="step">1단계</span><h2>영상을 끝까지 봐요</h2>${blocks}
+      ${sf.planText ? `<p class="memo">${esc(sf.planText)}</p>` : ''}${sf.memo ? `<p class="memo">${esc(sf.memo)}</p>` : ''}</div>
+    <div id="check"></div>`;
+  vids.forEach((v, i) => updateVid(i));
+  renderCheck();
+  if (vids.some(v => v.yt)) loadYT();
+}
+
+function updateVid(i) {
+  const v = vids[i], el = document.getElementById('vs-' + i);
+  if (!el) return;
+  if (!requireWatch()) { el.innerHTML = ''; return; }
+  if (v.yt && !v.failed) {
+    const pct = Math.min(100, Math.round(v.pct * 100));
+    const ok = v.pct >= NEED;
+    el.innerHTML = `<div class="wbar"><i style="width:${pct}%" class="${ok ? 'ok' : ''}"></i></div>
+      <div class="wtxt ${ok ? 'ok' : ''}">${v.dur ? (ok ? `시청 ${pct}% · 다 봤어요` : `시청 ${pct}% · 90%를 넘게 보면 체크할 수 있어요`) : '재생 버튼을 눌러 영상을 봐 주세요'}</div>`;
+  } else {
+    el.innerHTML = `${v.failed ? '<div class="wtxt">이 영상은 여기서 재생할 수 없어서 시청 시간을 셀 수 없어요. 위 버튼으로 열어 봐 주세요.</div>' : '<div class="wtxt">이 영상은 시청 시간을 셀 수 없어요. 끝까지 본 뒤 아래에 체크해 주세요.</div>'}
+      <label class="conf"><input type="checkbox" data-conf="${i}" ${v.confirmed ? 'checked' : ''}> 이 영상을 끝까지 봤어요</label>`;
+    if (v.failed && v.yt && !document.querySelector('#vb-' + i + ' .link')) {
+      document.querySelector('#vb-' + i + ' .vid').outerHTML = `<a class="link" href="${esc(v.url)}" target="_blank" rel="noopener">영상 보러 가기</a>`;
+    }
+  }
+}
+
+let ytLoading = false;
+function loadYT() {
+  if (ytLoading) return; ytLoading = true;
+  window.onYouTubeIframeAPIReady = () => vids.forEach((v, i) => { if (v.yt) makePlayer(i); });
+  const sc = document.createElement('script');
+  sc.src = 'https://www.youtube.com/iframe_api';
+  sc.onerror = () => ytFail();
+  document.head.appendChild(sc);
+  setTimeout(() => { if (!window.YT || !window.YT.Player) ytFail(); }, 10000);
+}
+function ytFail() {
+  vids.forEach((v, i) => { if (v.yt && !v.player) { v.failed = true; updateVid(i); } });
+  renderCheck();
+}
+function makePlayer(i) {
+  const v = vids[i];
+  v.player = new YT.Player('pl-' + i, {
+    videoId: v.yt, host: 'https://www.youtube-nocookie.com',
+    playerVars: { rel: 0, playsinline: 1, modestbranding: 1 },
+    events: {
+      onReady: () => { v.dur = Math.floor(v.player.getDuration() || 0); tick(i); },
+      onError: () => { v.failed = true; updateVid(i); renderCheck(); },
+    },
+  });
+}
+// 0.25초마다 재생 중인 초를 기록 (2배속이어도 빠짐없이)
+setInterval(() => vids.forEach((v, i) => {
+  if (!v.player || v.failed || typeof v.player.getPlayerState !== 'function') return;
+  if (v.player.getPlayerState() === 1) {
+    const t = Math.floor(v.player.getCurrentTime());
+    if (!v.dur) v.dur = Math.floor(v.player.getDuration() || 0);
+    if (!v.watched.has(t)) { v.watched.add(t); if (v.watched.size % 5 === 0) saveWatched(v, i); }
+    tick(i);
+  }
+}), 250);
+function tick(i) {
+  const v = vids[i];
+  const before = vidOk(v);
+  v.pct = v.dur ? v.watched.size / v.dur : 0;
+  if (v.pct >= NEED) saveWatched(v, i);
+  updateVid(i);
+  if (vidOk(v) !== before) renderCheck();
+}
+window.addEventListener('pagehide', () => vids.forEach(saveWatched));
+
+function renderCheck() {
+  const box = document.getElementById('check');
+  if (!box) return;
+  let html;
   if (mine && taken.has(mine.n)) {
-    checkPart = `<div class="card done">${mine.n}번, 시청 체크를 마쳤어요. 고마워요!</div>
+    html = `<div class="card done">${mine.n}번, 시청 체크를 마쳤어요. 고마워요!</div>
       ${sf.open ? '<button type="button" class="pl" id="another" style="width:100%">같은 휴대폰으로 다른 번호도 체크하기 (형제·자매)</button>' : ''}`;
   } else if (!sf.open) {
-    checkPart = `<div class="card done" style="background:#eef0f4;color:var(--sub);border-color:var(--line)">시청 체크가 마감되었어요.</div>`;
+    html = `<div class="card done" style="background:#eef0f4;color:var(--sub);border-color:var(--line)">시청 체크가 마감되었어요.</div>`;
   } else {
+    const ready = allWatched();
     let nums = '';
     for (let i = 1; i <= sf.total; i++) nums += `<button type="button" class="num ${num === i ? 'on' : ''}" data-n="${i}" ${taken.has(i) ? 'disabled' : ''}>${i}</button>`;
-    checkPart = `
+    let label = '장소와 번호를 골라 주세요';
+    if (!ready) label = '영상을 90% 넘게 보면 체크할 수 있어요';
+    else if (place && num) label = num + '번, 다 봤어요';
+    html = `
       <div class="card"><span class="step">2단계</span><h2>어디서 봤나요?</h2>
         <div class="places">${Object.entries(PLACES).map(([k, v]) => `<button type="button" class="pl ${place === k ? 'on' : ''}" data-p="${k}">${v}</button>`).join('')}</div></div>
       <div class="card"><span class="step">3단계</span><h2>내 번호를 눌러 주세요</h2>
         <div class="nums">${nums}</div>
         <div class="hint">회색 번호는 이미 체크된 번호예요. 내 번호가 회색이면 선생님께 말씀드려요.</div></div>
-      <button class="submit" id="submit" ${place && num ? '' : 'disabled'}>${num ? num + '번, 다 봤어요' : '장소와 번호를 골라 주세요'}</button>
+      <button class="submit" id="submit" ${ready && place && num ? '' : 'disabled'}>${label}</button>
       <div class="err" id="err"></div>`;
   }
-  app.innerHTML = `
-    <div class="top"><div class="ev">${esc(sf.eventTitle || '')}</div><h1>${esc(sf.title)}</h1>
-      <p>영상을 끝까지 보고, 아래에서 시청 체크를 해 주세요.</p></div>
-    <div class="card"><span class="step">1단계</span><h2>영상을 끝까지 봐요</h2>${videos}
-      ${sf.planText ? `<p class="memo">${esc(sf.planText)}</p>` : ''}${sf.memo ? `<p class="memo">${esc(sf.memo)}</p>` : ''}</div>
-    ${checkPart}`;
+  box.innerHTML = html;
 }
 
+app.addEventListener('change', ev => {
+  const c = ev.target.closest('[data-conf]');
+  if (c) { vids[Number(c.dataset.conf)].confirmed = c.checked; renderCheck(); }
+});
 app.addEventListener('click', async ev => {
   const pb = ev.target.closest('[data-p]');
-  if (pb) { place = pb.dataset.p; const y = scrollY; render(); scrollTo(0, y); return; }
+  if (pb) { place = pb.dataset.p; renderCheck(); return; }
   const nb = ev.target.closest('[data-n]');
-  if (nb && !nb.disabled) { num = Number(nb.dataset.n); const y = scrollY; render(); scrollTo(0, y); return; }
-  if (ev.target.id === 'another') { mine = null; place = ''; num = 0; render(); return; }
+  if (nb && !nb.disabled) { num = Number(nb.dataset.n); renderCheck(); return; }
+  if (ev.target.id === 'another') { mine = null; place = ''; num = 0; renderCheck(); return; }
   if (ev.target.id === 'submit') {
+    if (!allWatched()) return;
     const btn = ev.target; btn.disabled = true; btn.textContent = '보내는 중...';
     try {
       await S.addView(eid, sid, num, place, uid);
       mine = { n: num }; try { localStorage.setItem(KEY, JSON.stringify(mine)); } catch (e) {}
-      taken.add(num); render(); scrollTo(0, document.body.scrollHeight);
+      taken.add(num); renderCheck();
     } catch (e) {
       console.error(e);
       if (String(e.message).includes('already')) {
-        taken.add(num); num = 0; render();
+        taken.add(num); num = 0; renderCheck();
         document.getElementById('err').textContent = '방금 다른 사람이 그 번호를 체크했어요. 내 번호가 맞다면 선생님께 말씀드려요.';
       } else {
         btn.disabled = false; btn.textContent = num + '번, 다 봤어요';

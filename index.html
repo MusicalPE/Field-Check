@@ -738,6 +738,8 @@ function safetyForm(s) {
     <label class="f">영상 주소 (한 줄에 하나씩)</label>
     <textarea class="in" id="sf-videos" rows="3" placeholder="https://www.youtube.com/watch?v=...">${esc(s.videos.join('\n'))}</textarea>
     <div class="hint">유튜브 주소는 학생 화면에서 바로 재생돼요. 다른 주소는 "영상 보러 가기" 버튼으로 열려요.</div>
+    <label class="hint" style="display:flex;gap:8px;align-items:center;margin-top:8px;font-size:14px;color:var(--ink)"><input type="checkbox" id="sf-req" ${s.requireWatch === false ? '' : 'checked'} style="width:18px;height:18px"> 영상을 90% 넘게 봐야 번호를 체크할 수 있게 하기</label>
+    <div class="hint" style="margin-top:2px">유튜브 영상은 실제로 재생된 시간만 세요. 앞으로 건너뛴 부분은 들어가지 않아요. 유튜브가 아닌 영상은 시간을 셀 수 없어서 "끝까지 봤어요"에 체크하게 돼요.</div>
     <div class="two">
       <div><label class="f">학생 수 (번호 1번부터)</label><input class="in" type="number" min="1" max="200" id="sf-total" value="${s.total}"></div>
       <div></div>
@@ -763,7 +765,7 @@ async function saveSafetyForm(id) {
   if ($('#sf-cperiod').value && !$('#sf-cdate').value) return toast('교실 시청 날짜를 골라 주세요');
   const old = id ? safeties.find(x => x.id === id) : null;
   if (old && total < old.total && (vmap[id] || []).some(v => Number(v.n) > total) && !confirm('줄인 학생 수보다 큰 번호의 체크가 있어요. 그래도 저장할까요?')) return;
-  const s = { id: id || S.newId(), title, videos, total, memo: $('#sf-memo').value.trim(), classDate: $('#sf-cdate').value, classPeriod: $('#sf-cperiod').value, open: old ? !!old.open : true,
+  const s = { id: id || S.newId(), title, videos, total, memo: $('#sf-memo').value.trim(), classDate: $('#sf-cdate').value, classPeriod: $('#sf-cperiod').value, requireWatch: $('#sf-req').checked, open: old ? !!old.open : true,
     owner: user.uid, eventTitle: cur.title, createdAt: old ? old.createdAt : Date.now(), updatedAt: Date.now() };
   s.planText = classPlan(s);
   await S.saveSafety(cur.id, s);
@@ -814,6 +816,7 @@ async function copySafetyRecord(id) {
     `체험학습: ${cur.title} (${dateRange(cur)})`,
     `교육 내용: ${s.title}`,
     `교육 방법: 영상 시청 (가정에서 보호자와 함께 시청 안내${classPlan(s) ? ', ' + classPlan(s) : ''})`,
+    ...(s.requireWatch === false ? [] : ['시청 확인: 유튜브 영상은 실제 재생 시간 90% 이상일 때만 체크 가능']),
     ...(s.memo ? [`메모: ${s.memo}`] : []),
     ...s.videos.map((v, i) => `영상 ${i + 1}: ${v}`),
     `시청 학생: ${st.n}명 / ${s.total}명` + (st.n ? ` (${Object.keys(PLACES).filter(k => st.by[k]).map(k => `${PLACES[k]} ${st.by[k]}명`).join(', ')})` : ''),
