@@ -1905,6 +1905,7 @@ function showPlaces() {
 }
 function closePlaces() { const ul = $('#f-plist'); if (ul) ul.hidden = true; pSel = -1; }
 async function searchPlaces() {
+  if (!$('#f-place')) return;
   const q = $('#f-place').value.trim(), seq = ++pSeq;
   if (q.length < 2) { pItems = []; pNote = ''; closePlaces(); return; }
   let r = [];

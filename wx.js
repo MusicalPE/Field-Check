@@ -59,10 +59,10 @@
     const none = cells.every(c => c.bot.includes('wx-none'));
     const notes = cells.filter(c => c.warn.length).map(c => `${c.day} ${c.warn.join('·')}`);
     const wide = cells.length > 4;
-    return `<div class="wx-scroll"><table class="wx-table"${wide ? ` style="min-width:${cells.length * 92}px"` : ''}><tbody>
+    return `<div class="wx-scroll"><table class="wx-table${none ? ' wx-only' : ''}"${wide ? ` style="min-width:${cells.length * 92}px"` : ''}><tbody>
       <tr>${cells.map(c => `<td class="${c.warn.length ? 'warn' : ''}${c.today ? ' today' : ''}">${c.top}</td>`).join('')}</tr>
-      <tr class="wx-temp">${none ? `<td colspan="${cells.length}" class="wx-empty">아직 예보가 없어요 · 출발 2주 전부터 나와요</td>` : cells.map(c => `<td class="${c.warn.length ? 'warn' : ''}${c.today ? ' today' : ''}">${c.bot}</td>`).join('')}</tr>
-      </tbody></table></div>${wide ? `<p class="wx-hint">옆으로 밀면 ${cells.length}일 모두 보여요 ›</p>` : ''}
+      ${none ? '' : `<tr class="wx-temp">${cells.map(c => `<td class="${c.warn.length ? 'warn' : ''}${c.today ? ' today' : ''}">${c.bot}</td>`).join('')}</tr>`}
+      </tbody></table></div>${none ? '<p class="wx-wait">예보는 날마다 2주 앞까지 나와요. 가까워지면 저절로 채워져요.</p>' : ''}${wide ? `<p class="wx-hint">옆으로 밀면 ${cells.length}일 모두 보여요 ›</p>` : ''}
       ${notes.length ? `<p class="wx-w">주의 ${esc(notes.join(' · '))}${cells.some(c => c.warn.includes('비')) ? ' — 우산·우비 챙기기' : ''}${cells.some(c => c.warn.includes('영하')) ? ' — 따뜻한 옷' : ''}${cells.some(c => c.warn.includes('폭염')) ? ' — 물과 모자' : ''}</p>` : ''}`;
   }
   const css = `.wx-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
@@ -80,6 +80,8 @@
 .wx-table td.today{border-color:var(--pri);box-shadow:inset 0 0 0 1px var(--pri)}
 .wx-today{display:inline-block;font-style:normal;font-size:11px;font-weight:800;color:var(--on-pri,#fff);background:var(--pri);border-radius:99px;padding:0 7px;margin-bottom:2px}
 .wx-none{color:var(--sub);opacity:.7;font-size:12px;margin-top:6px}
+.wx-table.wx-only tr:first-child td{border-radius:14px;border-bottom:1px solid var(--line);padding-bottom:10px}
+.wx-wait{font-size:12.5px;color:var(--sub);margin:8px 0 0 6px}
 .wx-empty{font-family:var(--f-body,sans-serif)!important;font-size:13px!important;color:var(--sub)!important}
 .wx-hint{font-size:12px;color:var(--sub);margin:6px 0 0;text-align:right}
 .wx-w{font-size:13px;font-weight:800;color:var(--warn);margin:8px 0 0}`;
