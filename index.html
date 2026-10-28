@@ -1671,6 +1671,7 @@ function setTab(inModal) {
     ${row('자료 공유하기', '이 체험학습의 틀(업무, 일정, 준비물, 안전 교육, 설문, 활동지)을 짧은 주소와 QR로 다른 선생님께 보내요.', '<button class="chip" data-act="share">보내기</button>')}
     ${row('업데이트 소식', `지금 ${APP_VERSION}`, `<button class="chip" data-act="set-news">${setOpen.news ? '닫기' : '보기'}</button>`)}${news}
     ${row('개인정보처리방침', '어떤 정보를 어디에 두는지 알려 드려요.', '<a class="chip" href="privacy.html" target="_blank" rel="noopener">보기</a>')}
+    ${row('만든 사람 · 사용 조건', '음악적체육인 · 학교와 선생님은 무료로 써요. 판매·광고·이름 바꿔 배포는 안 돼요.', '<a class="chip" href="https://github.com/MusicalPE/Field-Check/blob/main/LICENSE" target="_blank" rel="noopener">보기</a>')}
     ${STANDALONE ? '' : row('앱으로 설치하기', '홈 화면에 체험첵! 아이콘을 만들어요.', `<button class="chip" data-act="set-install">${installEvt ? '설치' : (setOpen.install ? '닫기' : '설치 방법')}</button>`) + inst}
     ${S.mode === 'demo' ? '' : row('로그아웃', esc(user.email || user.displayName || ''), '<button class="chip" data-act="logout">로그아웃</button>')}
     ${danger}
