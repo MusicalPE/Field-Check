@@ -53,15 +53,18 @@ const p = new URLSearchParams(location.search);
 const eid = p.get('e'), sid = p.get('s');
 let uid = null, sv = null, answers = {};
 
-function message(big, title, text) {
-  app.innerHTML = `<div class="msg"><div class="big">${big}</div><h2>${esc(title)}</h2><p>${esc(text)}</p></div>`;
+function message(big, title, text, code) {
+  app.innerHTML = `<div class="msg"><div class="big">${big}</div><h2>${esc(title)}</h2><p>${esc(text)}</p>${code ? `<p style="margin-top:14px;font-size:12px">오류 코드: ${esc(code)}</p>` : ''}</div>`;
 }
 
 async function boot() {
   if (!eid || !sid) return message('?', '주소가 올바르지 않아요', '선생님이 보여 준 QR을 다시 찍어 주세요.');
+  let step = '로그인';
   try {
     uid = await S.studentLogin();
+    step = '설문 읽기';
     sv = await S.getSurvey(eid, sid);
+    step = '제출 확인';
     if (!sv) return message('?', '설문을 찾을 수 없어요', '선생님께 QR을 다시 확인해 달라고 해 주세요.');
     document.title = sv.title;
     if (!sv.open) return message('■', '설문이 마감되었어요', '참여해 주어서 고마워요.');
@@ -69,7 +72,8 @@ async function boot() {
     render();
   } catch (e) {
     console.error(e);
-    message('!', '설문을 열지 못했어요', '인터넷 연결을 확인하고 다시 열어 주세요.');
+    const code = (step || '') + ' / ' + (e && (e.code || e.message) || '알 수 없음');
+    message('!', '설문을 열지 못했어요', '인터넷 연결을 확인하고 다시 열어 주세요.', code);
   }
 }
 
