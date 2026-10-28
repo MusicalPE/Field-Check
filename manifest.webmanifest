@@ -1,0 +1,18 @@
+{
+  "id": "./",
+  "name": "체험첵! Field-Check!",
+  "short_name": "체험첵!",
+  "description": "현장체험학습·수학여행 준비부터 당일 인원 점검, 사후 설문까지 선생님이 함께 쓰는 업무 도우미",
+  "lang": "ko",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F3F6EF",
+  "theme_color": "#3D6B35",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

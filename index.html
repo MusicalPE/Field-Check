@@ -6,7 +6,12 @@
 <meta name="theme-color" content="#3D6B35">
 <title>체험첵! Field-Check!</title>
 <link rel="icon" href="favicon-32.png">
-<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="체험첵!">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=Nanum+Gothic:wght@400;700;800&family=IBM+Plex+Mono:wght@500&display=swap">
 <style>
 /* 체험첵! 그림 톤: 숲 나뭇잎 초록, 맑은 하늘, 가죽 가방 갈색, 금빛 체크 (캠첵!·트립첵!과 같은 틀) */
@@ -232,6 +237,32 @@ label.f{display:block;font-size:13px;font-weight:800;color:var(--sub);margin:12p
 .invite{display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:start;margin-top:14px}
 .qrsm{padding:10px!important}
 @media (max-width:640px){.invite{grid-template-columns:1fr}.invite>div:first-child{display:flex;flex-direction:column;align-items:center}}
+.tabbar{display:none}
+.install{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;background:var(--pri);color:var(--on-pri);border-radius:20px;padding:14px 18px;margin-bottom:18px;box-shadow:0 8px 24px var(--shadow)}
+.install p{margin:0;font-size:14px;font-weight:700;flex:1;min-width:200px}
+.install .ibtns{display:flex;gap:8px}
+.install button{font-size:13px;font-weight:800;border-radius:999px;padding:8px 16px;border:1.5px solid var(--on-pri);background:transparent;color:var(--on-pri)}
+.install button.go{background:var(--on-pri);color:var(--pri)}
+.morelist{display:flex;flex-direction:column;gap:8px}
+.morelist button{display:flex;align-items:center;gap:12px;text-align:left;border:1.5px solid var(--line);background:var(--soft);border-radius:16px;padding:14px 16px;font-weight:800;font-size:15px;color:var(--ink)}
+.morelist button small{display:block;font-weight:400;font-size:12.5px;color:var(--sub)}
+.morelist button.warn{color:var(--warn)}
+@media (max-width:640px){
+  body.in-event .tabs,body.in-event .evtop{display:none}
+  body.in-event main{padding-bottom:calc(120px + env(safe-area-inset-bottom,0px))}
+  body.in-event .toast{bottom:calc(108px + env(safe-area-inset-bottom,0px))}
+  body.in-event .tabbar{display:grid;grid-template-columns:1fr 1fr auto 1fr 1fr;align-items:end;position:fixed;left:0;right:0;bottom:0;z-index:40;
+    background:var(--card);border-top:1.5px solid var(--line);box-shadow:0 -8px 25px var(--shadow);
+    padding:8px max(10px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(10px,env(safe-area-inset-left,0px))}
+  .tabbar button{border:none;background:none;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;margin:0 3px;color:var(--sub);font-size:11.5px;font-weight:800;border-radius:14px;position:relative}
+  .tabbar svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+  .tabbar button[aria-current="page"]{color:var(--pri);background:var(--pri-soft)}
+  .tabbar button:not(.tab-main)[aria-current="page"]::before{content:"";position:absolute;top:-8px;left:50%;width:26px;height:3px;margin-left:-13px;border-radius:0 0 3px 3px;background:var(--pri)}
+  .tabbar .tab-main{justify-self:center;width:68px;height:68px;border-radius:50%;background:var(--card);color:var(--pri);border:2.5px solid var(--pri);margin:-32px 8px 0;justify-content:center;padding:0;box-shadow:0 8px 20px var(--shadow)}
+  .tabbar .tab-main[aria-current="page"]{background:var(--pri);color:var(--on-pri);outline:4px solid var(--acc-soft)}
+  .tabbar .tab-main svg{width:28px;height:28px}
+  .tabbar .tab-main:active{transform:scale(.95)}
+}
 .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--pri);color:var(--on-pri);padding:12px 20px;border-radius:16px;font-size:14px;font-weight:700;opacity:0;transition:.2s;pointer-events:none;z-index:99;max-width:min(92vw,460px);text-align:center;box-shadow:0 12px 30px rgba(0,0,0,.2)}
 .toast.show{opacity:1}
 
@@ -265,6 +296,13 @@ label.f{display:block;font-size:13px;font-weight:800;color:var(--sub);margin:12p
 </head>
 <body>
 <main id="main"></main>
+<nav class="tabbar" id="tabbar" aria-label="메뉴" hidden>
+  <button data-act="bn" data-tab="home"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span>목록</span></button>
+  <button data-act="bn" data-tab="pre"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M9 10l2 2 4-4M9 16h6"/></svg><span>사전</span></button>
+  <button data-act="bn" data-tab="day" class="tab-main"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V4M5 4h11l-2 3.5L16 11H5"/></svg><span>당일</span></button>
+  <button data-act="bn" data-tab="post"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16M7 16v-5M12 16V7M17 16v-8"/></svg><span>사후</span></button>
+  <button data-act="bn" data-tab="more"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span>더보기</span></button>
+</nav>
 
 <div class="ov" id="ov"><div class="md" id="md"></div></div>
 <div class="toast" id="toast"></div>
@@ -387,6 +425,7 @@ S.onUser(async u => {
 });
 
 function renderLogin() {
+  setNav(false);
   $('#main').innerHTML = `<div class="login card">
     <img src="logo.png" alt="체험첵! Field-Check!" class="login-logo">
     <p>현장체험학습·수학여행 준비부터 사후 설문까지 한곳에서 챙겨요.</p>
@@ -401,7 +440,7 @@ async function loadEvents() {
 
 // ---------- 홈 ----------
 function renderHome() {
-  stopWatch(); roll = null; marks = [];
+  stopWatch(); roll = null; marks = []; setNav(false);
   cur = null; history.replaceState(null, '', location.pathname + location.search);
   const t = today();
   const up = events.filter(e => parseD(e.endDate || e.date) >= t);
@@ -422,6 +461,7 @@ function renderHome() {
       <div class="hside">
         <div class="hwho">${S.mode === 'demo' ? '<span class="mode">체험 모드</span>' : ''}<span class="who">${esc(user.displayName || user.email || '')}</span>${S.mode === 'demo' ? '' : '<button class="hbtn" data-act="logout">로그아웃</button>'}</div>
         <button class="btn pri" data-act="new-event">+ 새 체험학습</button></div></div>
+    ${installBanner()}
     ${events.length ? '' : `<div class="card empty"><b>아직 만든 체험학습이 없어요</b>위의 '새 체험학습'을 눌러 첫 계획을 만들어 보세요.<br>출발일만 넣으면 준비 일정이 날짜별로 자동으로 정리돼요.</div>`}
     ${up.length ? `<div class="grid">${up.map(card).join('')}</div>` : ''}
     ${past.length ? `<h3 style="margin:26px 0 10px;font-size:15px;color:var(--sub)">지난 체험학습</h3><div class="grid">${past.map(card).join('')}</div>` : ''}`;
@@ -540,11 +580,17 @@ async function openEvent(id, keepTab) {
   if (cur && cur.id === id) renderEvent();
 }
 
+function setNav(inEvent) {
+  document.body.classList.toggle('in-event', inEvent);
+  $('#tabbar').hidden = !inEvent;
+  document.querySelectorAll('#tabbar button').forEach(b => { if (inEvent && b.dataset.tab === tab) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
+}
 function renderEvent() {
   const e = cur;
+  setNav(true);
   const tabs = [['pre', '사전', '준비'], ['day', '당일', '현장'], ['post', '사후', '정리']];
   $('#main').innerHTML = `
-    <div class="rowb"><button class="btn sm" data-act="home">← 목록</button><div style="display:flex;gap:6px"><button class="btn sm" data-act="edit-event">정보 고치기</button>${S.mode === 'demo' ? '' : '<button class="btn sm" data-act="logout">로그아웃</button>'}</div></div>
+    <div class="rowb evtop"><button class="btn sm" data-act="home">← 목록</button><div style="display:flex;gap:6px"><button class="btn sm" data-act="edit-event">정보 고치기</button>${S.mode === 'demo' ? '' : '<button class="btn sm" data-act="logout">로그아웃</button>'}</div></div>
     <div class="card evhead">
       <div style="min-width:0"><div class="eyebrow"><span class="badge">${esc(e.kind)}</span>${multiClass() ? `<span class="badge gray">${classesOf(e).length}개 반</span>` : ''}</div>
       <h2>${esc(e.title)}</h2>
@@ -1293,6 +1339,48 @@ async function syncChildren() {
 
 setInterval(() => { if (cur && tab === 'day' && !$('#ov').classList.contains('show')) renderEvent(); }, 30000);
 
+// ---------- 앱으로 설치 ----------
+const STANDALONE = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+const UA = navigator.userAgent;
+const IOS = /iphone|ipad|ipod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const MOBILE = /android|iphone|ipad|ipod/i.test(UA) || IOS;
+const IKEY = 'fieldcheck-installed';
+let installEvt = null;
+const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+if (STANDALONE) lsSet(IKEY, '1');
+function installHow() {
+  if (/KAKAOTALK/i.test(UA)) return '카카오톡 안에서는 설치가 안 돼요. 오른쪽 위 [⋮] → [다른 브라우저로 열기]로 연 다음 설치해 주세요.';
+  if (/NAVER\(inapp|Instagram|FBAN|FBAV|Line\//i.test(UA)) return '이 앱 안의 브라우저에서는 설치가 안 돼요. 메뉴에서 [다른 브라우저로 열기]를 고른 다음 설치해 주세요.';
+  if (IOS) return '아이폰은 사파리 아래쪽 [공유] 버튼을 누르고 [홈 화면에 추가]를 고르세요.';
+  if (/SamsungBrowser/i.test(UA)) return '삼성 인터넷은 주소창 오른쪽 설치 버튼을 누르거나, 아래 [≡] 메뉴 → [현재 페이지 추가] → [홈 화면]을 고르세요.';
+  if (/android/i.test(UA)) return '크롬은 오른쪽 위 [⋮] 메뉴 → [홈 화면에 추가] 또는 [앱 설치]를 고르세요.';
+  return '브라우저 주소창 오른쪽의 설치 아이콘이나, 메뉴의 [앱 설치]를 눌러 주세요.';
+}
+const installLater = () => STANDALONE || lsGet(IKEY) || (() => { try { return sessionStorage.getItem('fieldcheck-install-later'); } catch (e) { return null; } })();
+function installBanner() {
+  if (STANDALONE || installLater() || !(MOBILE || installEvt)) return '';
+  return `<div class="install"><p>${installEvt ? '휴대폰에 앱으로 설치하면 아이콘을 눌러 바로 열 수 있어요.' : esc(installHow())}</p>
+    <div class="ibtns">${installEvt ? '<button class="go" data-act="install-go">앱으로 설치</button>' : ''}<button data-act="install-later">나중에</button></div></div>`;
+}
+if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; if (user && !cur) renderHome(); });
+window.addEventListener('appinstalled', () => { lsSet(IKEY, '1'); installEvt = null; if (user && !cur) renderHome(); });
+async function installGo() {
+  if (!installEvt) { openModal(`<h3>앱으로 설치하기</h3><p>${esc(STANDALONE ? '이미 앱으로 열려 있어요.' : installHow())}</p><div class="mact"><button class="btn pri" data-act="close">알겠어요</button></div>`); return; }
+  installEvt.prompt();
+  try { const c = await installEvt.userChoice; if (c && c.outcome === 'accepted') lsSet(IKEY, '1'); } catch (e) {}
+  installEvt = null; if (!cur) renderHome();
+}
+function moreMenu() {
+  openModal(`<h3>더보기</h3><div class="morelist">
+    <button data-act="edit-event"><span>정보 고치기<small>이름, 날짜, 장소, 반과 인원</small></span></button>
+    <button data-act="team"><span>선생님 초대·관리<small>초대 QR과 링크, 함께하는 선생님</small></span></button>
+    ${STANDALONE ? '' : '<button data-act="install-go"><span>앱으로 설치하기<small>홈 화면에 체험첵! 아이콘을 만들어요</small></span></button>'}
+    ${S.mode === 'demo' ? '' : `<button data-act="logout" class="warn"><span>로그아웃<small>${esc(user.displayName || user.email || '')}</small></span></button>`}
+  </div>`);
+}
+
 // ---------- 이벤트 연결 ----------
 document.addEventListener('click', async ev => {
   const el = ev.target.closest('[data-act]');
@@ -1312,6 +1400,15 @@ document.addEventListener('click', async ev => {
         if (!confirm(`'${cur.title}'을(를) 지울까요? 업무 일정과 설문·응답이 모두 사라져요.`)) return;
         await S.deleteEvent(cur.id); closeModal(); await loadEvents(); renderHome(); toast('지웠어요'); break;
       case 'tab': tab = el.dataset.tab; renderEvent(); break;
+      case 'bn': {
+        const t = el.dataset.tab;
+        if (t === 'home') { await loadEvents(); renderHome(); }
+        else if (t === 'more') moreMenu();
+        else { tab = t; renderEvent(); window.scrollTo(0, 0); }
+        break;
+      }
+      case 'install-go': closeModal(); await installGo(); break;
+      case 'install-later': try { sessionStorage.setItem('fieldcheck-install-later', '1'); } catch (e) {} renderHome(); break;
       case 'toggle': {
         const t = cur.tasks.find(x => x.id === id); t.done = el.checked; renderEvent(); await saveCur('tasks'); break;
       }
