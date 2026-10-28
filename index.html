@@ -542,7 +542,7 @@ function renderEvent() {
   const e = cur;
   const tabs = [['pre', '사전', '준비'], ['day', '당일', '현장'], ['post', '사후', '정리']];
   $('#main').innerHTML = `
-    <div class="rowb"><button class="btn sm" data-act="home">← 목록</button><button class="btn sm" data-act="edit-event">정보 고치기</button></div>
+    <div class="rowb"><button class="btn sm" data-act="home">← 목록</button><div style="display:flex;gap:6px"><button class="btn sm" data-act="edit-event">정보 고치기</button>${S.mode === 'demo' ? '' : '<button class="btn sm" data-act="logout">로그아웃</button>'}</div></div>
     <div class="card evhead">
       <div style="min-width:0"><div class="eyebrow"><span class="badge">${esc(e.kind)}</span>${multiClass() ? `<span class="badge gray">${classesOf(e).length}개 반</span>` : ''}</div>
       <h2>${esc(e.title)}</h2>
