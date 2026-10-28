@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#3D6B35">
+<title>체험첵! 설문 결과 정리</title>
+<link rel="icon" href="favicon-32.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=Nanum+Gothic:wght@400;700;800&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+  :root{--ink:#232C22;--sub:#5F6E5B;--line:#DCE6D4;--soft:#F4F7F0;--pri:#3D6B35;--brown:#A8693A;--hi:#4E8A3E;--mid:#E0B246;--lo:#B9C2B5;--warn:#C94A35;
+    --f-display:"Do Hyeon","Noto Sans KR",sans-serif;--f-body:"Nanum Gothic","Apple SD Gothic Neo","Malgun Gothic",sans-serif;--f-mono:"IBM Plex Mono",ui-monospace,monospace}
+  *{box-sizing:border-box}
+  html{background:#E9EEE5}
+  body{margin:0;color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.55;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .tools{position:sticky;top:0;z-index:5;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:12px;background:rgba(233,238,229,.92);backdrop-filter:blur(6px)}
+  .tools button,.tools a{font:inherit;font-weight:800;border-radius:999px;padding:9px 18px;border:1.5px solid var(--line);background:#fff;color:var(--ink);cursor:pointer;text-decoration:none}
+  .tools .pri{background:var(--pri);border-color:var(--pri);color:#fff}
+  .page{width:210mm;max-width:100%;margin:0 auto 24px;background:#fff;padding:16mm 15mm;box-shadow:0 6px 24px rgba(0,0,0,.08)}
+  .eyebrow{color:var(--brown);font-weight:800;font-size:13px}
+  h1{font-family:var(--f-display);font-weight:400;font-size:30px;margin:2px 0 6px;color:var(--ink);line-height:1.2}
+  .meta{color:var(--sub);font-size:12.5px}
+  .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0 6px}
+  .kc{background:var(--soft);border-radius:12px;padding:12px 14px}
+  .kc .v{font-family:var(--f-mono);font-size:26px;color:var(--pri);line-height:1.15}
+  .kc.lo .v{color:var(--warn)}
+  .kc .l{font-size:12.5px;margin-top:4px;word-break:keep-all}
+  h2{font-size:16px;margin:22px 0 8px;padding-left:10px;border-left:4px solid var(--brown);line-height:1.3}
+  table{width:100%;border-collapse:collapse}
+  th{font-size:12px;color:var(--sub);font-weight:700;text-align:left;padding:6px 6px;border-bottom:1.5px solid var(--line)}
+  td{padding:9px 6px;border-bottom:1px solid var(--line);vertical-align:middle}
+  td.avg{font-weight:800;text-align:center;white-space:nowrap;width:58px;font-family:var(--f-mono)}
+  td.q{word-break:keep-all}
+  .low{color:var(--warn);font-size:12px;font-weight:700;white-space:nowrap}
+  .sbar{display:flex;height:12px;border-radius:6px;overflow:hidden;background:#EEF1EB;width:100%;min-width:150px}
+  .sbar i{display:block;height:100%}
+  .sbar .h{background:var(--hi)}.sbar .m{background:var(--mid)}.sbar .o{background:var(--lo)}
+  .sbt{font-size:11.5px;color:var(--sub);margin-top:3px;white-space:nowrap}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:6px 22px;align-items:start}
+  .ctab td.n{text-align:right;width:70px;white-space:nowrap;font-family:var(--f-mono)}
+  .ctab tr.top td{font-weight:800}
+  .cbar{height:7px;border-radius:4px;background:#EEF1EB;margin-top:4px;overflow:hidden}
+  .cbar i{display:block;height:100%;background:var(--hi)}
+  .qt{font-weight:800;font-size:13px;margin:4px 0 6px;word-break:keep-all}
+  .quotes{display:flex;flex-direction:column;gap:6px}
+  .quote{border-left:3px solid var(--mid);background:#FBF8EF;padding:6px 10px;font-size:13px;word-break:keep-all}
+  ul.ins{margin:0;padding-left:20px}
+  ul.ins li{margin:4px 0;word-break:keep-all}
+  .memo{width:100%;min-height:90px;border:1.5px dashed var(--line);border-radius:10px;padding:10px 12px;font:inherit;color:var(--ink);resize:vertical;margin-top:8px}
+  .memo-print{white-space:pre-wrap;display:none;margin-top:8px}
+  .saved{font-size:12px;color:var(--sub);margin-left:6px}
+  .foot{color:var(--sub);font-size:11.5px;margin-top:22px;border-top:1px solid var(--line);padding-top:8px}
+  .avoid{break-inside:avoid}
+  .msg{max-width:520px;margin:60px auto;background:#fff;border-radius:20px;padding:30px;text-align:center}
+  @media (max-width:760px){.page{padding:18px 16px}.cards{grid-template-columns:1fr}.two{grid-template-columns:1fr}.sbar{min-width:90px}}
+  @page{size:A4;margin:12mm}
+  @media print{
+    html{background:#fff}
+    .tools{display:none}
+    .page{width:auto;margin:0;padding:0;box-shadow:none}
+    .memo{display:none}.memo-print{display:block}.memo-empty{display:none}
+    .saved{display:none}
+    tr,.quote,.kc{break-inside:avoid}
+    h2{break-after:avoid}
+  }
+</style>
+</head>
+<body>
+<div class="tools"><a href="./" id="back">← 체험첵!</a><button class="pri" id="print">인쇄 · PDF로 저장</button></div>
+<div id="app"><div class="msg">결과를 불러오는 중이에요...</div></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="config.js"></script>
+<script src="store.js"></script>
+<script>
+const S = window.Store;
+const app = document.getElementById('app');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const p = new URLSearchParams(location.search), eid = p.get('e'), sid = p.get('s');
+const WK = '일월화수목금토';
+const fmtD = s => { if (!s) return ''; const [y, m, d] = s.split('-').map(Number); return `${m}.${d}(${WK[new Date(y, m - 1, d).getDay()]})`; };
+let sv = null, ev = null;
+document.getElementById('back').href = './#e=' + encodeURIComponent(eid || '');
+document.getElementById('print').onclick = () => window.print();
+
+function msg(t) { app.innerHTML = `<div class="msg">${t}</div>`; }
+
+S.onUser(async u => {
+  if (!u) return msg('선생님 계정으로 로그인한 뒤 다시 열어 주세요.<br><a href="./">체험첵! 열기</a>');
+  try {
+    const evs = await S.listEvents(u.uid);
+    ev = evs.find(e => e.id === eid);
+    sv = await S.getSurvey(eid, sid);
+    if (!ev || !sv) return msg('설문을 찾을 수 없어요. 함께하는 선생님만 볼 수 있어요.');
+    const rs = await S.listResponses(eid, sid);
+    render(rs);
+  } catch (e) { console.error(e); msg('결과를 불러오지 못했어요. 잠시 뒤 다시 열어 주세요.'); }
+});
+
+// 같은 글(띄어쓰기·마침표만 다른 것 포함)은 한 번만, 많이 나온 순서로
+function groupTexts(list) {
+  const m = new Map();
+  list.forEach(x => { const k = x.replace(/[\s.!~,]+/g, ''); const g = m.get(k); if (g) g[1]++; else m.set(k, [x.trim(), 1]); });
+  return [...m.values()].sort((a, b) => b[1] - a[1]);
+}
+function render(rs) {
+  document.title = `${sv.title} 결과 · ${ev.title}`;
+  const n = rs.length;
+  const vals = q => rs.map(r => (r.answers || {})[q.id]).filter(v => v !== undefined && v !== '');
+  const stars = sv.questions.filter(q => q.type === 'star').map(q => {
+    const v = vals(q).map(Number), c = v.length;
+    const hi = v.filter(x => x >= 4).length, mid = v.filter(x => x === 3).length, lo = v.filter(x => x <= 2).length;
+    return { q, c, avg: c ? v.reduce((a, b) => a + b, 0) / c : 0, hi, mid, lo };
+  });
+  const choices = sv.questions.filter(q => q.type === 'choice').map(q => {
+    const v = vals(q), opts = [...q.options, ...[...new Set(v)].filter(x => !q.options.includes(x))];
+    const rows = opts.map(o => ({ o, c: v.filter(x => x === o).length })).sort((a, b) => b.c - a.c);
+    return { q, total: v.length, rows };
+  });
+  const texts = sv.questions.filter(q => q.type === 'text').map(q => ({ q, list: vals(q).map(String) }));
+  const scored = stars.filter(s => s.c);
+  const best = scored.length ? scored.reduce((a, b) => b.avg > a.avg ? b : a) : null;
+  const worst = scored.length > 1 ? scored.reduce((a, b) => b.avg < a.avg ? b : a) : null;
+  const ch1 = choices.find(c => c.total);
+
+  const cards = [];
+  if (best) cards.push(`<div class="kc"><div class="v">${best.avg.toFixed(2)}</div><div class="l">${esc(best.q.text)} · 가장 높음</div></div>`);
+  if (ch1) cards.push(`<div class="kc"><div class="v">${ch1.rows[0].c}명</div><div class="l">${esc(ch1.q.text)} · 1위 "${esc(ch1.rows[0].o)}"</div></div>`);
+  if (worst && worst !== best) cards.push(`<div class="kc lo"><div class="v">${worst.avg.toFixed(2)}</div><div class="l">${esc(worst.q.text)} · 가장 낮음</div></div>`);
+  if (cards.length < 3) cards.push(`<div class="kc"><div class="v">${n}명</div><div class="l">응답한 학생</div></div>`);
+
+  let secNo = 0;
+  const sec = t => `<h2>${++secNo}. ${t}</h2>`;
+  const starSec = scored.length ? `<div class="avoid">${sec('별점 문항')}<table>
+    <tr><th>질문</th><th style="text-align:center">평균</th><th>응답 (4~5점 · 3점 · 1~2점)</th></tr>
+    ${stars.map((s, i) => `<tr><td class="q">${i + 1}. ${esc(s.q.text)} ${worst && s === worst ? '<span class="low">← 가장 낮음</span>' : ''}</td>
+      <td class="avg">${s.c ? s.avg.toFixed(2) : '-'}</td>
+      <td><div class="sbar">${s.c ? `<i class="h" style="width:${s.hi / s.c * 100}%"></i><i class="m" style="width:${s.mid / s.c * 100}%"></i><i class="o" style="width:${s.lo / s.c * 100}%"></i>` : ''}</div>
+        <div class="sbt">4~5점 ${s.hi} · 3점 ${s.mid} · 1~2점 ${s.lo}</div></td></tr>`).join('')}
+  </table></div>` : '';
+  const chSec = choices.length ? `${sec('고르기 문항')}<div class="two">${choices.map(c => `<div class="avoid"><div class="qt">${esc(c.q.text)}</div>
+      <table class="ctab">${c.rows.map((r, i) => `<tr class="${i === 0 && r.c ? 'top' : ''}"><td>${esc(r.o)}<div class="cbar"><i style="width:${c.total ? r.c / c.total * 100 : 0}%"></i></div></td><td class="n">${r.c}명 ${c.total ? Math.round(r.c / c.total * 100) : 0}%</td></tr>`).join('')}</table></div>`).join('')}</div>` : '';
+  const txSec = texts.some(t => t.list.length) ? `${sec('서술형에서 나온 이야기')}<div class="two">${texts.filter(t => t.list.length).map(t => `<div><div class="qt">${esc(t.q.text)} <span class="meta">${t.list.length}명</span></div>
+      <div class="quotes">${groupTexts(t.list).map(([x, c]) => `<div class="quote">"${esc(x)}"${c > 1 ? ` <b class="meta">${c}명</b>` : ''}</div>`).join('')}</div></div>`).join('')}</div>` : '';
+
+  const ins = [];
+  if (best) ins.push(`<b>가장 높은 점수</b>: ${esc(best.q.text)} ${best.avg.toFixed(2)}점 (4~5점 ${best.hi}명)`);
+  if (worst && worst !== best) ins.push(`<b>가장 낮은 점수</b>: ${esc(worst.q.text)} ${worst.avg.toFixed(2)}점 (1~2점 ${worst.lo}명)`);
+  choices.filter(c => c.total).forEach(c => ins.push(`<b>${esc(c.q.text)}</b>: "${esc(c.rows[0].o)}" ${c.rows[0].c}명(${Math.round(c.rows[0].c / c.total * 100)}%)${c.rows[1] && c.rows[1].c ? `, 다음은 "${esc(c.rows[1].o)}" ${c.rows[1].c}명` : ''}`));
+  texts.filter(t => t.list.length).forEach(t => ins.push(`<b>${esc(t.q.text)}</b>: ${t.list.length}명이 글을 남겼어요`));
+
+  const memo = sv.reportMemo || '';
+  app.innerHTML = `<div class="page">
+    <div class="eyebrow">${esc(ev.title)}${ev.target ? ' · ' + esc(ev.target) : ''} · ${fmtD(ev.date)}${ev.endDate ? ' ~ ' + fmtD(ev.endDate) : ''}</div>
+    <h1>${esc(sv.title)} 결과</h1>
+    <div class="meta">응답 ${n}명 · 별점은 5점 만점 · ${new Date().toLocaleDateString('ko-KR')} 정리</div>
+    ${n ? `<div class="cards">${cards.slice(0, 3).join('')}</div>${starSec}${chSec}${txSec}
+    <div class="avoid">${sec('눈여겨볼 점')}<ul class="ins">${ins.map(x => `<li>${x}</li>`).join('')}</ul>
+      <textarea class="memo" id="memo" placeholder="선생님 생각을 적어 주세요. 예: 다음에는 모둠 활동 시간을 더 늘리기. 적은 내용은 함께 인쇄되고 저장돼요.">${esc(memo)}</textarea><span class="saved" id="saved"></span>
+      <div class="memo-print ${memo ? '' : 'memo-empty'}" id="memoPw"><div class="qt" style="margin-top:10px">선생님 생각</div><div id="memoP">${esc(memo)}</div></div></div>` : '<p class="meta" style="margin-top:20px">아직 응답이 없어요.</p>'}
+    <div class="foot">체험첵! Field-Check!에서 정리했어요. 응답은 익명으로 모였고 학생 이름은 들어 있지 않아요.</div>
+  </div>`;
+  const m = document.getElementById('memo');
+  if (m) {
+    let t = null;
+    m.addEventListener('input', () => {
+      document.getElementById('memoP').textContent = m.value; document.getElementById('memoPw').classList.toggle('memo-empty', !m.value.trim());
+      clearTimeout(t); document.getElementById('saved').textContent = '저장 중...';
+      t = setTimeout(async () => {
+        try { sv.reportMemo = m.value; await S.saveSurvey(eid, sv); document.getElementById('saved').textContent = '저장했어요'; }
+        catch (e) { document.getElementById('saved').textContent = '저장하지 못했어요'; }
+      }, 700);
+    });
+  }
+}
+</script>
+</body>
+</html>

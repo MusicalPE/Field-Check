@@ -992,7 +992,8 @@ async function showResults(sid) {
     <div><span class="badge ${s.open ? 'ok' : 'gray'}">${s.open ? '받는 중' : '마감'}</span> <span class="badge">응답 ${n}명</span></div>
     ${n ? blocks : '<div class="empty"><b>아직 응답이 없어요</b>QR을 보여 주고 잠시 뒤에 새로고침해 보세요.</div>'}
     <div class="mact"><button class="btn" data-act="results" data-id="${sid}">새로고침</button><div class="sp"></div>
-      <button class="btn pri" data-act="csv" data-id="${sid}" ${n ? '' : 'disabled'}>엑셀로 내려받기</button></div>`, true);
+      <button class="btn" data-act="csv" data-id="${sid}" ${n ? '' : 'disabled'}>엑셀로 내려받기</button>
+      <a class="btn pri" style="text-decoration:none;display:inline-flex;align-items:center" href="report.html?e=${encodeURIComponent(cur.id)}&s=${encodeURIComponent(sid)}" target="_blank" rel="noopener">결과 정리·인쇄</a></div>`, true);
   renderEvent();
 }
 async function downloadCsv(sid) {
@@ -1474,7 +1475,7 @@ const NEWS = [
   { v: '1.0.0', d: '2026. 10. 28.', items: [
     '사전: 출발일 기준 업무 일정표, 안전 교육(영상 90% 시청 확인·번호 체크·실시 기록 복사), 준비물 체크리스트(학생·가정용 QR, 인솔 교사용)',
     '당일: 정해진 시간마다 인원 점검 — 학생은 QR로 반·번호를 누르고, 선생님은 실시간 번호표로 확인',
-    '사후: 로그인 없는 QR 설문, 결과 보기, 엑셀로 내려받기',
+    '사후: 로그인 없는 QR 설문, 결과 보기, 엑셀로 내려받기, 그래프가 들어간 결과 정리·인쇄',
     '반 구성과 함께하는 선생님 초대(QR·링크), 반별 보기',
     '앱으로 설치, 휴대폰 하단 메뉴, 어두운 화면',
   ] },
