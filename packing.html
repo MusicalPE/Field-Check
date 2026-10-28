@@ -75,6 +75,10 @@ h2{font-family:var(--f-display);font-weight:400!important}
 .num,.nums button{font-family:var(--f-mono)!important;font-weight:500!important}
 .submit,.big,.send{border-radius:999px!important;box-shadow:0 6px 16px color-mix(in srgb,var(--pri) 25%,transparent)}
 :focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.it.imp{background:color-mix(in srgb,var(--warn) 7%,var(--card));box-shadow:inset 4px 0 0 var(--warn)}
+.it.imp span{font-weight:800}
+.it .must{margin-left:auto;flex:none;font-style:normal;font-size:12px;font-weight:800;color:#fff;background:var(--warn);border-radius:99px;padding:2px 9px}
+.it.on.imp{background:transparent;box-shadow:none}.it.on .must{opacity:.4}
 </style>
 </head>
 <body>
@@ -137,7 +141,7 @@ function render() {
   const body = groups().map(g => g.leave
     ? `<section class="grp leave"><h2>${esc(g.cat)}</h2><ul>${g.items.map(i => `<li>✕ ${esc(i.t)}</li>`).join('')}</ul></section>`
     : `<section class="grp"><h2>${esc(g.cat)}</h2>${g.items.map(i =>
-        `<button type="button" class="it ${checked[i.id] ? 'on' : ''}" data-id="${i.id}"><div class="box">${checked[i.id] ? '✓' : ''}</div><span>${esc(i.t)}</span></button>`).join('')}</section>`
+        `<button type="button" class="it ${checked[i.id] ? 'on' : ''}${i.imp ? ' imp' : ''}" data-id="${i.id}"><div class="box">${checked[i.id] ? '✓' : ''}</div><span>${esc(i.t)}</span>${i.imp ? '<em class="must">꼭!</em>' : ''}</button>`).join('')}</section>`
   ).join('');
   app.innerHTML = `
     <div class="top"><div class="ev">${esc(when)}</div><h1>${esc(list.eventTitle)} 준비물</h1>

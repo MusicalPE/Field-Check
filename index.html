@@ -293,6 +293,14 @@ a.chip{text-decoration:none;display:inline-block}
 .askdel{background:var(--warn-soft)!important;flex-wrap:wrap}
 .askdel .txt{flex:1}
 .confirm{display:inline-flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:13px;font-weight:700}
+.zitems li.imp{background:color-mix(in srgb,var(--warn) 7%,var(--card));box-shadow:inset 4px 0 0 var(--warn)}
+.zitems li.imp .txt{font-weight:800}
+.zitems li.imp.on{background:transparent;box-shadow:none}
+.zitems li.imp.on .txt{font-weight:400}
+.zitems li.imp.on .must{opacity:.4}
+.must{display:inline-block;flex:none;font-size:11.5px;font-weight:800;color:#fff;background:var(--warn);border-radius:99px;padding:2px 8px;white-space:nowrap;vertical-align:1px}
+.impsel{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:800;color:var(--warn);width:100%;cursor:pointer}
+.impsel input{width:18px;height:18px;accent-color:var(--warn)}
 .zempty{font-size:13px;color:var(--sub);text-align:center;padding:12px;background:var(--soft);border-radius:12px;border:1px dashed var(--line)}
 .add{display:flex;gap:6px;margin-top:2px}
 .add input{flex:1;min-width:0;font-size:14px;background:var(--soft);border:1.5px dashed var(--line);border-radius:12px;padding:9px 13px}
@@ -416,7 +424,7 @@ const DEFAULT_SURVEY = {
 const QTYPES = { star: '별점 (5점)', choice: '고르기', text: '자유롭게 쓰기' };
 // 준비물 기본 목록: [분류, 두고 오는 물건인지, [항목...]]
 const PACK_STUDENT_DAY = [
-  ['꼭 챙겨요', false, ['작은 가방(배낭)', '물병', '손수건·휴지', '필기도구·활동지', '우산 또는 우비', '개인 상비약 (필요한 학생)']],
+  ['꼭 챙겨요', false, ['작은 가방(배낭)', '물병', '손수건·휴지', '필기도구·활동지', '우산 또는 우비', '!개인 상비약 (필요한 학생)']],
   ['있으면 좋아요', false, ['모자', '간식 (약속한 만큼)', '물티슈', '비닐봉투']],
   ['가져오지 않아요', true, ['비싼 물건', '날카롭거나 위험한 물건', '너무 많은 용돈']],
 ];
@@ -424,15 +432,16 @@ const PACK_STUDENT_NIGHT = [
   ['숙박할 때 챙겨요', false, ['갈아입을 옷', '잠옷', '속옷·양말', '세면도구 (칫솔·치약·수건)', '휴대폰 충전기', '젖은 옷 담을 비닐봉투']],
 ];
 const PACK_TEACHER = [
-  ['서류', false, ['학교 법인카드', '학생 명렬표·비상연락망', '인솔 계획서·일정표', '차량·숙소·체험장 연락처', '안전 교육 자료']],
-  ['안전', false, ['구급약품 (밴드·소독약·해열제 등)', '학생 개인 상비약 보관 목록', '호루라기', '모둠 깃발·조끼']],
+  ['서류', false, ['!학교 법인카드', '!학생 명렬표·비상연락망', '인솔 계획서·일정표', '차량·숙소·체험장 연락처', '안전 교육 자료']],
+  ['안전', false, ['!구급약품 (밴드·소독약·해열제 등)', '!학생 개인 상비약 보관 목록', '호루라기', '모둠 깃발·조끼']],
   ['개인용품', false, ['신분증·교직원증', '내 상비약', '물병', '편한 신발', '모자·선크림', '휴대폰 충전기']],
   ['기타', false, ['보조배터리', '우비·우산', '쓰레기봉투', '영수증 봉투']],
 ];
 const PACK_TEACHER_NIGHT = ['숙박할 때 챙겨요', false, ['갈아입을 옷', '잠옷', '속옷·양말', '세면도구 (칫솔·치약·수건)', '야간 순찰용 손전등', '숙소 방 배정표']];
 const teacherDefaults = () => cur.endDate ? [...PACK_TEACHER.slice(0, 3), PACK_TEACHER_NIGHT, PACK_TEACHER[3]] : PACK_TEACHER;
 const packItems = (groups, withDone) => groups.flatMap(([cat, leave, items]) =>
-  items.map(t => ({ id: S.newId(), cat, t, ...(leave ? { leave: true } : {}), ...(withDone ? { done: false } : {}) })));
+  items.map(t0 => { const imp = t0.startsWith('!'), t = imp ? t0.slice(1) : t0;
+    return { id: S.newId(), cat, t, ...(imp ? { imp: true } : {}), ...(leave ? { leave: true } : {}), ...(withDone ? { done: false } : {}) }; }));
 function groupItems(items) {
   const order = [], map = {};
   (items || []).forEach(it => { if (!map[it.cat]) { map[it.cat] = []; order.push(it.cat); } map[it.cat].push(it); });
@@ -733,8 +742,8 @@ function zonesOf(k) {
 async function savePack(k, zones) {
   const cats = zones.map(z => k === 'student' ? { name: z.name, leave: !!z.leave } : { name: z.name });
   const items = zones.flatMap(z => z.items.map(it => k === 'student'
-    ? { id: it.id, cat: z.name, t: it.t, ...(z.leave ? { leave: true } : {}) }
-    : { id: it.id, cat: z.name, t: it.t, done: !!it.done }));
+    ? { id: it.id, cat: z.name, t: it.t, ...(it.imp ? { imp: true } : {}), ...(z.leave ? { leave: true } : {}) }
+    : { id: it.id, cat: z.name, t: it.t, done: !!it.done, ...(it.imp ? { imp: true } : {}) }));
   if (k === 'student') {
     plist = { ...plist, cats, items, updatedAt: Date.now() };
     await S.saveList(cur.id, 'student', plist); await touch();
@@ -757,12 +766,14 @@ function zoneCard(k, z) {
   const rows = z.items.map(it => {
     if (pq && pq.type === 'item' && pq.id === it.id) return `<li class="qrow"><form class="qedit" data-pf="item" data-id="${it.id}">
         <input class="in" name="t" value="${esc(it.t)}" aria-label="항목 이름 고치기" data-focus>
-        <button type="submit" class="btn sm pri">저장</button><button type="button" class="btn sm" data-act="pq-cancel">취소</button></form></li>`;
+        <button type="submit" class="btn sm pri">저장</button><button type="button" class="btn sm" data-act="pq-cancel">취소</button>
+        <label class="impsel"><input type="checkbox" name="imp" ${it.imp ? 'checked' : ''}><span>꼭! 챙기기로 강조</span></label></form></li>`;
     if (pdel === it.id) return `<li class="askdel"><span class="txt">${esc(it.t)}</span><span class="confirm">목록에서 뺄까요?
         <button class="btn sm warn" data-act="item-del-yes" data-id="${it.id}">빼기</button><button class="btn sm" data-act="item-del-no">취소</button></span></li>`;
-    return `<li class="${isT && it.done ? 'on' : ''}">
-      ${isT ? `<label><input type="checkbox" ${it.done ? 'checked' : ''} data-act="tcheck" data-id="${it.id}"><span class="txt">${esc(it.t)}</span></label>`
-        : `<span class="dot">${z.leave ? '✕' : '•'}</span><span class="txt" style="flex:1">${esc(it.t)}</span>`}
+    const must = it.imp ? '<span class="must">꼭!</span>' : '';
+    return `<li class="${isT && it.done ? 'on' : ''}${it.imp ? ' imp' : ''}">
+      ${isT ? `<label><input type="checkbox" ${it.done ? 'checked' : ''} data-act="tcheck" data-id="${it.id}"><span class="txt">${esc(it.t)}</span>${must}</label>`
+        : `<span class="dot">${z.leave ? '✕' : '•'}</span><span class="txt" style="flex:1">${esc(it.t)}${must ? ' ' + must : ''}</span>`}
       <button class="pen" data-act="item-edit" data-id="${it.id}" aria-label="${esc(it.t)} 고치기" title="고치기">${PENCIL}</button>
       <button class="pen trash" data-act="item-del" data-id="${it.id}" aria-label="${esc(it.t)} 빼기" title="빼기">${TRASH}</button></li>`;
   }).join('');
@@ -815,7 +826,7 @@ async function packSubmit(form) {
     await savePack(k, zones); rerenderPack(z.name);
   } else if (pf === 'item') {
     const t = form.t.value.trim(); if (!t) return toast('항목 이름을 적어 주세요');
-    zones.forEach(z => z.items.forEach(i => { if (i.id === form.dataset.id) i.t = t; }));
+    zones.forEach(z => z.items.forEach(i => { if (i.id === form.dataset.id) { i.t = t; i.imp = !!(form.imp && form.imp.checked); } }));
     pq = null; await savePack(k, zones); rerenderPack();
   } else if (pf === 'zone') {
     const name = form.name.value.trim(), old = form.dataset.cat;
@@ -835,7 +846,7 @@ async function startStudentList() {
 function packQR() {
   const u = new URL('packing.html', location.href);
   u.hash = ''; u.search = `?e=${encodeURIComponent(cur.id)}`;
-  const list = groupItems(plist.items).map(g => `<div class="pl-g"><b>${esc(g.cat)}</b><ul>${g.items.map(i => `<li>${g.leave ? '✕ ' : '□ '}${esc(i.t)}</li>`).join('')}</ul></div>`).join('');
+  const list = groupItems(plist.items).map(g => `<div class="pl-g"><b>${esc(g.cat)}</b><ul>${g.items.map(i => `<li>${g.leave ? '✕ ' : '□ '}${i.imp ? '<b>' + esc(i.t) + ' (꼭!)</b>' : esc(i.t)}</li>`).join('')}</ul></div>`).join('');
   qrModal({
     url: u.toString(), title: `${cur.title} 준비물`,
     sub: `${dateRange(cur)} · 휴대폰 카메라로 찍으면 체크리스트가 열려요`,
@@ -1640,7 +1651,7 @@ document.addEventListener('click', async ev => {
       case 'pack-add-defaults': {
         const zs = zonesOf('teacher'), names = zs.map(z => z.name);
         const add = teacherDefaults().filter(([c]) => !names.includes(c));
-        add.forEach(([c, , items]) => zs.push({ name: c, items: items.map(t => ({ id: S.newId(), t, done: false })) }));
+        add.forEach(([c, , items]) => zs.push({ name: c, items: items.map(t0 => ({ id: S.newId(), t: t0.replace(/^!/, ''), imp: t0.startsWith('!'), done: false })) }));
         await savePack('teacher', zs); rerenderPack(); toast(`${add.map(([c]) => c).join(', ')} 구역을 더했어요`); break;
       }
       case 'zone-new': {
