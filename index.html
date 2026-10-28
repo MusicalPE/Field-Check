@@ -238,6 +238,52 @@ label.f{display:block;font-size:13px;font-weight:800;color:var(--sub);margin:12p
 .qrsm{padding:10px!important}
 @media (max-width:640px){.invite{grid-template-columns:1fr}.invite>div:first-child{display:flex;flex-direction:column;align-items:center}}
 .tabbar{display:none}
+.packsec{margin-top:6px}
+.packbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;background:var(--card);border:1.5px solid var(--line);border-radius:18px;padding:10px 14px;margin-bottom:14px}
+.zgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr));gap:16px;align-items:start}
+.zone{background:var(--card);border:1.5px solid var(--line);border-radius:22px;box-shadow:0 4px 16px var(--shadow);padding:16px 16px 14px;display:flex;flex-direction:column;gap:10px;min-width:0;transition:border-color .2s,box-shadow .2s}
+.zone:hover{border-color:color-mix(in srgb,var(--pri) 35%,var(--line))}
+.zone.complete{border-color:color-mix(in srgb,var(--ok) 45%,var(--line))}
+.zone-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.zh-text{flex:1;min-width:0}
+.zone h4{font-family:var(--f-display);font-weight:400;font-size:22px;margin:0;color:var(--pri);display:flex;align-items:center;gap:6px;flex-wrap:wrap;overflow-wrap:anywhere}
+.ztag{font-family:var(--f-body);font-size:11.5px;font-weight:800;border-radius:999px;padding:2px 8px;background:var(--pri-soft);color:var(--pri)}
+.ztag.warn{background:var(--warn-soft);color:var(--warn)}
+.cnt{font-family:var(--f-mono);font-size:13px;color:var(--sub);background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:3px 10px;white-space:nowrap}
+.cnt.full{color:var(--ok);background:var(--ok-soft);border-color:color-mix(in srgb,var(--ok) 30%,var(--line))}
+.zitems{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.zitems li{display:flex;align-items:center;gap:6px;padding:7px 8px;border-radius:12px;border:1px solid transparent}
+.zitems li:hover{background:var(--soft);border-color:var(--line)}
+.zitems li label{display:flex;align-items:center;gap:10px;flex:1;min-width:0;cursor:pointer}
+.zitems .txt{font-weight:700;overflow-wrap:anywhere}
+.zitems li.on .txt{color:var(--sub);text-decoration:line-through;font-weight:400}
+.zitems .dot{width:22px;text-align:center;color:var(--sub);flex:none}
+.zitems input[type=checkbox]{appearance:none;width:22px;height:22px;flex:none;border:2px solid var(--sub);border-radius:6px;display:grid;place-content:center;cursor:pointer;background:var(--card);margin:0}
+.zitems input[type=checkbox]::after{content:"";width:11px;height:6px;border-left:2.5px solid var(--on-pri);border-bottom:2.5px solid var(--on-pri);transform:rotate(-45deg) translate(1px,-1px);opacity:0}
+.zitems input[type=checkbox]:checked{background:var(--pri);border-color:var(--pri)}
+.zitems input[type=checkbox]:checked::after{opacity:1}
+.pen{flex:none;display:inline-grid;place-items:center;width:32px;height:32px;border:none;border-radius:8px;background:transparent;color:var(--sub);opacity:.45;padding:0}
+.pen:hover,.pen:focus-visible{opacity:1;color:var(--brown);background:var(--brown-soft)}
+.zitems li:hover .pen,.zone-head:hover .pen{opacity:.85}
+@media (hover:none){.pen{opacity:.75}}
+.pen.trash:hover{color:var(--warn);background:var(--warn-soft)}
+.zone h4 .pen{width:28px;height:28px}
+.qrow{padding:8px!important;background:var(--soft);border:1.5px solid var(--brown)!important}
+.qedit{display:flex;gap:6px;flex:1;min-width:0;flex-wrap:wrap}
+.qedit .in{flex:1 1 150px;min-width:0;padding:7px 11px}
+.qzone{display:flex;flex-direction:column;gap:8px;background:var(--soft);padding:12px;border-radius:16px;border:1.5px solid var(--brown)}
+.qbtns{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.askdel{background:var(--warn-soft)!important;flex-wrap:wrap}
+.askdel .txt{flex:1}
+.confirm{display:inline-flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:13px;font-weight:700}
+.zempty{font-size:13px;color:var(--sub);text-align:center;padding:12px;background:var(--soft);border-radius:12px;border:1px dashed var(--line)}
+.add{display:flex;gap:6px;margin-top:2px}
+.add input{flex:1;min-width:0;font-size:14px;background:var(--soft);border:1.5px dashed var(--line);border-radius:12px;padding:9px 13px}
+.add input:focus{border-color:var(--pri);background:var(--card);outline:none}
+.add button{font-size:14px;font-weight:800;border:none;border-radius:12px;padding:0 16px;background:var(--brown-soft);color:var(--brown)}
+.add button:hover{background:var(--brown);color:var(--card)}
+.zone-new{border:2px dashed var(--line);border-radius:22px;background:transparent;color:var(--sub);font-size:16px;font-weight:800;min-height:120px;width:100%}
+.zone-new:hover{border-color:var(--pri);color:var(--pri);background:var(--pri-soft)}
 .install{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;background:var(--pri);color:var(--on-pri);border-radius:20px;padding:14px 18px;margin-bottom:18px;box-shadow:0 8px 24px var(--shadow)}
 .install p{margin:0;font-size:14px;font-weight:700;flex:1;min-width:200px}
 .install .ibtns{display:flex;gap:8px}
@@ -636,91 +682,119 @@ function preTab() {
   </div>
   </div><div>
   ${safetySection()}
-  ${packSection()}
   <div class="sec"><h3>곧 들어올 기능</h3><div class="soon">
     <div class="card"><b>사전 조사</b><span>모둠 QR로 조사 내용 받기</span></div>
-  </div></div></div></div>`;
+  </div></div></div></div>
+  ${packSection()}`;
 }
 
-function packSection() {
-  const nItems = plist ? plist.items.filter(i => !i.leave).length : 0;
-  const student = plist
-    ? `<div class="card svc">
-        <div><span class="badge">학생·가정용</span> <span class="badge ok">다 챙겼다고 알린 학생 ${pcount}명</span>
-          <h3 style="margin:8px 0 2px;font-size:16px">학생 준비물</h3>
-          <div class="meta">챙길 것 ${nItems}개 · 학생은 QR로 들어와 자기 휴대폰에서 체크해요</div></div>
-        <div class="acts">
-          <button class="btn sm pri" data-act="pack-qr">QR·인쇄</button>
-          <button class="btn sm" data-act="pack-edit" data-kind="student">목록 고치기</button>
-          <button class="btn sm" data-act="pack-refresh">알린 학생 새로고침</button>
-        </div></div>`
-    : `<div class="card svc"><div><span class="badge">학생·가정용</span>
-          <h3 style="margin:8px 0 2px;font-size:16px">학생 준비물</h3>
-          <div class="meta">기본 목록으로 시작한 뒤 우리 학교에 맞게 고치면 돼요.${cur.endDate ? ' 숙박 준비물도 함께 들어가요.' : ''}</div></div>
-        <div class="acts"><button class="btn sm pri" data-act="pack-start-s">기본 목록으로 시작하기</button></div></div>`;
-  let teacher;
-  if (!cur.teacherItems) {
-    teacher = `<div class="card svc"><div><span class="badge acc">교사용</span>
-        <h3 style="margin:8px 0 2px;font-size:16px">인솔 교사 준비물</h3>
-        <div class="meta">명렬표, 구급약, 호루라기처럼 선생님이 챙길 것을 체크해요.</div></div>
-      <div class="acts"><button class="btn sm pri" data-act="pack-start-t">기본 목록으로 시작하기</button></div></div>`;
-  } else {
-    const all = cur.teacherItems, done = all.filter(i => i.done).length;
-    const groups = groupItems(all).map(g => `
-      <div class="pg">${esc(g.cat)}</div>
-      ${g.items.map(it => `<div class="task ${it.done ? 'done' : ''}" style="padding:8px 12px">
-        <input type="checkbox" ${it.done ? 'checked' : ''} data-act="tcheck" data-id="${it.id}" aria-label="챙김">
-        <div class="tx"><div class="tt">${esc(it.t)}</div></div></div>`).join('')}`).join('');
-    teacher = `<div class="card" style="padding:12px 4px 6px">
-      <div class="rowb" style="padding:0 12px;margin-bottom:4px"><div><span class="badge acc">교사용</span> <b style="margin-left:4px">인솔 교사 준비물</b> <span class="badge ok">${done}/${all.length}</span></div>
-        <button class="btn sm" data-act="pack-edit" data-kind="teacher">목록 고치기</button></div>
-      ${groups}</div>`;
-  }
-  return `<div class="sec"><h3>준비물 체크리스트</h3><div class="grid" style="grid-template-columns:1fr">${student}${teacher}</div></div>`;
+// ---------- 준비물 (캠첵! 구역 카드 방식) ----------
+const PENCIL = '<svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true"><path d="M13.6 3.2a1.6 1.6 0 0 1 2.3 0l.9.9a1.6 1.6 0 0 1 0 2.3L7.4 15.8l-3.6.9.9-3.6z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M12.2 4.6l3.2 3.2" stroke="currentColor" stroke-width="1.6"/></svg>';
+const TRASH = '<svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true"><path d="M4 6h12M8 6V4.5h4V6M5.5 6l.8 10h7.4l.8-10M8.5 9v4.5M11.5 9v4.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+let packKind = (() => { try { return localStorage.getItem('fieldcheck-packkind') || 'student'; } catch (e) { return 'student'; } })();
+let pq = null;     // 줄에서 고치는 중: {type:'item', id} 또는 {type:'zone', cat}
+let pdel = null;   // 한 번 더 묻는 중인 항목 id
+let zdel = null;   // 한 번 더 묻는 중인 구역 이름
+const packItemsOf = k => (k === 'student' ? (plist ? plist.items : []) : (cur.teacherItems || []));
+function zonesOf(k) {
+  const items = packItemsOf(k), stored = k === 'student' ? (plist && plist.cats) : cur.teacherCats;
+  const zones = (stored && stored.length ? stored : groupItems(items).map(g => ({ name: g.cat, leave: g.leave }))).map(z => ({ ...z, items: [] }));
+  const byName = Object.fromEntries(zones.map(z => [z.name, z]));
+  items.forEach(it => { let z = byName[it.cat]; if (!z) { z = { name: it.cat, leave: !!it.leave, items: [] }; zones.push(z); byName[it.cat] = z; } z.items.push(it); });
+  return zones;
 }
-
-// ---------- 준비물 목록 고치기 ----------
-function listForm(kind) {
-  const items = kind === 'student' ? plist.items : cur.teacherItems;
-  ldraft = { kind, cats: groupItems(items).map(g => ({ name: g.cat, leave: g.leave, text: g.items.map(i => i.t).join('\n') })) };
-  renderListForm();
-}
-function renderListForm() {
-  const isS = ldraft.kind === 'student';
-  const cats = ldraft.cats.map((c, i) => `
-    <div class="qed">
-      <div class="qh"><input class="in" data-lc="${i}" data-lf="name" value="${esc(c.name)}" placeholder="분류 이름" style="flex:1">
-        ${isS ? `<label class="hint" style="margin:0;white-space:nowrap"><input type="checkbox" data-lc="${i}" data-lf="leave" ${c.leave ? 'checked' : ''}> 가져오지 않는 물건</label>` : ''}
-        <button class="ib" data-act="lc-del" data-i="${i}">빼기</button></div>
-      <textarea class="in" rows="5" data-lc="${i}" data-lf="text" placeholder="한 줄에 하나씩">${esc(c.text)}</textarea>
-    </div>`).join('');
-  openModal(`<h3>${isS ? '학생 준비물' : '인솔 교사 준비물'} 고치기</h3>
-    <div class="hint" style="margin-bottom:10px">분류마다 물건을 한 줄에 하나씩 적어요.${isS ? ' "가져오지 않는 물건"에 체크한 분류는 학생 화면에서 체크 없이 안내만 보여요.' : ''}</div>
-    ${cats}
-    <button class="btn sm" data-act="lc-add">+ 분류 더하기</button>
-    <div class="mact"><div class="sp"></div><button class="btn" data-act="close">취소</button><button class="btn pri" data-act="pack-save">저장</button></div>`, true);
-}
-async function saveListForm() {
-  const isS = ldraft.kind === 'student';
-  const old = isS ? plist.items : cur.teacherItems;
-  const items = [];
-  for (const c of ldraft.cats) {
-    const name = c.name.trim(), lines = [...new Set(c.text.split('\n').map(x => x.trim()).filter(Boolean))];
-    if (!lines.length) continue;
-    if (!name) return toast('분류 이름을 적어 주세요');
-    lines.forEach(t => {
-      const prev = old.find(o => o.cat === name && o.t === t);
-      items.push({ id: prev ? prev.id : S.newId(), cat: name, t, ...(isS && c.leave ? { leave: true } : {}), ...(!isS ? { done: prev ? !!prev.done : false } : {}) });
-    });
-  }
-  if (!items.length) return toast('물건을 하나 이상 적어 주세요');
-  if (isS) {
-    plist = { ...plist, items, updatedAt: Date.now() };
+async function savePack(k, zones) {
+  const cats = zones.map(z => k === 'student' ? { name: z.name, leave: !!z.leave } : { name: z.name });
+  const items = zones.flatMap(z => z.items.map(it => k === 'student'
+    ? { id: it.id, cat: z.name, t: it.t, ...(z.leave ? { leave: true } : {}) }
+    : { id: it.id, cat: z.name, t: it.t, done: !!it.done }));
+  if (k === 'student') {
+    plist = { ...plist, cats, items, updatedAt: Date.now() };
     await S.saveList(cur.id, 'student', plist); await touch();
   } else {
-    cur.teacherItems = items; await saveCur('teacherItems');
+    cur.teacherCats = cats; cur.teacherItems = items; await saveCur('teacherCats', 'teacherItems');
   }
-  closeModal(); renderEvent(); toast('저장했어요');
+}
+function zoneCard(k, z) {
+  const isT = k === 'teacher', n = z.items.length, done = isT ? z.items.filter(i => i.done).length : 0, full = isT && n && done === n;
+  const editing = pq && pq.type === 'zone' && pq.cat === z.name;
+  const head = editing
+    ? `<form class="qzone" data-pf="zone" data-cat="${esc(z.name)}">
+        <input class="in" name="name" value="${esc(z.name)}" placeholder="구역 이름" aria-label="구역 이름" data-focus>
+        ${isT ? '' : `<label class="hint" style="display:flex;gap:8px;align-items:center;margin:0;font-size:13.5px;color:var(--ink)"><input type="checkbox" name="leave" ${z.leave ? 'checked' : ''} style="width:18px;height:18px"> 가져오지 않는 물건 (학생 화면에서 체크 없이 안내만)</label>`}
+        <div class="qbtns"><button type="submit" class="btn sm pri">저장</button><button type="button" class="btn sm" data-act="pq-cancel">취소</button><span class="sp"></span>
+          ${zdel === z.name ? `<span class="confirm">구역과 항목 ${n}개를 뺄까요? <button type="button" class="btn sm warn" data-act="zone-del-yes" data-cat="${esc(z.name)}">빼기</button><button type="button" class="btn sm" data-act="zone-del-no">취소</button></span>`
+            : `<button type="button" class="ib" style="color:var(--warn)" data-act="zone-del" data-cat="${esc(z.name)}">구역 삭제</button>`}</div></form>`
+    : `<div class="zone-head"><div class="zh-text"><h4>${esc(z.name)}${z.leave ? '<span class="ztag warn">가져오지 않아요</span>' : ''}<button class="pen" data-act="zone-edit" data-cat="${esc(z.name)}" aria-label="${esc(z.name)} 구역 이름 고치기" title="구역 이름 고치기">${PENCIL}</button></h4></div>
+        <span class="cnt ${full ? 'full' : ''}">${isT ? `${full ? '다 챙김 ' : ''}${done} / ${n}` : `${n}개`}</span></div>`;
+  const rows = z.items.map(it => {
+    if (pq && pq.type === 'item' && pq.id === it.id) return `<li class="qrow"><form class="qedit" data-pf="item" data-id="${it.id}">
+        <input class="in" name="t" value="${esc(it.t)}" aria-label="항목 이름 고치기" data-focus>
+        <button type="submit" class="btn sm pri">저장</button><button type="button" class="btn sm" data-act="pq-cancel">취소</button></form></li>`;
+    if (pdel === it.id) return `<li class="askdel"><span class="txt">${esc(it.t)}</span><span class="confirm">목록에서 뺄까요?
+        <button class="btn sm warn" data-act="item-del-yes" data-id="${it.id}">빼기</button><button class="btn sm" data-act="item-del-no">취소</button></span></li>`;
+    return `<li class="${isT && it.done ? 'on' : ''}">
+      ${isT ? `<label><input type="checkbox" ${it.done ? 'checked' : ''} data-act="tcheck" data-id="${it.id}"><span class="txt">${esc(it.t)}</span></label>`
+        : `<span class="dot">${z.leave ? '✕' : '•'}</span><span class="txt" style="flex:1">${esc(it.t)}</span>`}
+      <button class="pen" data-act="item-edit" data-id="${it.id}" aria-label="${esc(it.t)} 고치기" title="고치기">${PENCIL}</button>
+      <button class="pen trash" data-act="item-del" data-id="${it.id}" aria-label="${esc(it.t)} 빼기" title="빼기">${TRASH}</button></li>`;
+  }).join('');
+  return `<section class="zone ${full ? 'complete' : ''}">
+    ${head}
+    ${isT ? `<div class="bar" style="margin-top:0;height:6px"><i style="width:${n ? done / n * 100 : 0}%;${full ? 'background:var(--ok)' : ''}"></i></div>` : ''}
+    <ul class="zitems">${rows}</ul>
+    ${n ? '' : '<div class="zempty">항목이 없어요. 아래 칸에서 넣어 주세요.</div>'}
+    <form class="add" data-pf="add" data-cat="${esc(z.name)}"><input name="t" type="text" placeholder="+ 항목 넣기" aria-label="${esc(z.name)}에 항목 넣기" autocomplete="off"><button type="submit">넣기</button></form>
+  </section>`;
+}
+function packSection() {
+  const k = packKind;
+  const chips = `<div class="cfbar" style="margin:0 0 12px">
+    <button class="chip ${k === 'student' ? 'on' : ''}" data-act="pack-kind" data-id="student">학생·가정용</button>
+    <button class="chip ${k === 'teacher' ? 'on' : ''}" data-act="pack-kind" data-id="teacher">인솔 교사용</button></div>`;
+  let body;
+  if (k === 'student' && !plist) {
+    body = `<div class="card empty" style="padding:28px 20px"><b>학생 준비물 목록이 아직 없어요</b>기본 목록으로 시작한 뒤 구역마다 바로 고치면 돼요.${cur.endDate ? ' 숙박 준비물도 함께 들어가요.' : ''}<div style="margin-top:12px"><button class="btn pri" data-act="pack-start-s">기본 목록으로 시작하기</button></div></div>`;
+  } else if (k === 'teacher' && !cur.teacherItems) {
+    body = `<div class="card empty" style="padding:28px 20px"><b>인솔 교사 준비물이 아직 없어요</b>명렬표, 구급약, 호루라기처럼 선생님이 챙길 것을 체크해요.<div style="margin-top:12px"><button class="btn pri" data-act="pack-start-t">기본 목록으로 시작하기</button></div></div>`;
+  } else {
+    const zones = zonesOf(k);
+    const top = k === 'student'
+      ? `<div class="packbar"><div><span class="badge ok">다 챙겼다고 알린 학생 ${pcount}명</span> <span class="meta">학생은 QR로 들어와 자기 휴대폰에서 체크해요</span></div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm pri" data-act="pack-qr">QR·인쇄</button><button class="btn sm" data-act="pack-refresh">새로고침</button></div></div>`
+      : (() => { const all = cur.teacherItems, d = all.filter(i => i.done).length; return `<div class="packbar"><div><span class="badge ${d === all.length && all.length ? 'ok' : 'acc'}">${d} / ${all.length} 챙김</span> <span class="meta">함께하는 선생님과 같이 체크해요</span></div></div>`; })();
+    body = `${top}<div class="zgrid">${zones.map(z => zoneCard(k, z)).join('')}<button class="zone-new" data-act="zone-new">+ 구역 추가</button></div>`;
+  }
+  return `<div class="sec packsec"><h3>준비물 체크리스트</h3>${chips}${body}</div>`;
+}
+function rerenderPack(focus) {
+  const el = document.querySelector('.packsec');
+  if (!el) return renderEvent();
+  el.outerHTML = packSection();
+  const f = document.querySelector('.packsec [data-focus]');
+  if (f) { f.focus(); f.select && f.select(); }
+  else if (focus) { const a = document.querySelector(`.packsec form[data-pf="add"][data-cat="${CSS.escape(focus)}"] input`); if (a) a.focus(); }
+}
+async function packSubmit(form) {
+  const k = packKind, zones = zonesOf(k), pf = form.dataset.pf;
+  if (pf === 'add') {
+    const t = form.t.value.trim(); if (!t) return;
+    const z = zones.find(z => z.name === form.dataset.cat); if (!z) return;
+    if (z.items.some(i => i.t === t)) { toast('이미 있는 항목이에요'); return; }
+    z.items.push({ id: S.newId(), t, done: false });
+    await savePack(k, zones); rerenderPack(z.name);
+  } else if (pf === 'item') {
+    const t = form.t.value.trim(); if (!t) return toast('항목 이름을 적어 주세요');
+    zones.forEach(z => z.items.forEach(i => { if (i.id === form.dataset.id) i.t = t; }));
+    pq = null; await savePack(k, zones); rerenderPack();
+  } else if (pf === 'zone') {
+    const name = form.name.value.trim(), old = form.dataset.cat;
+    if (!name) return toast('구역 이름을 적어 주세요');
+    if (name !== old && zones.some(z => z.name === name)) return toast('같은 이름의 구역이 있어요');
+    const z = zones.find(z => z.name === old); if (!z) return;
+    z.name = name; if (form.leave) z.leave = form.leave.checked;
+    pq = null; zdel = null; await savePack(k, zones); rerenderPack();
+  }
 }
 async function startStudentList() {
   const groups = cur.endDate ? [PACK_STUDENT_DAY[0], ...PACK_STUDENT_NIGHT, ...PACK_STUDENT_DAY.slice(1)] : PACK_STUDENT_DAY;
@@ -1182,11 +1256,13 @@ function startWatch() {
   const id = cur.id;
   unwatchEv = S.watchEvent(id, e => {
     if (!cur || cur.id !== id || !e) return;
+    if ((e.updatedAt || 0) === (cur.updatedAt || 0)) return;   // 내가 방금 저장한 것
     const changed = (e.touchedAt || 0) !== (cur.touchedAt || 0);
     const i = events.findIndex(x => x.id === id); if (i >= 0) events[i] = e;
     cur = e;
+    const busy = $('#ov').classList.contains('show') || pq || pdel || zdel || (document.activeElement && document.activeElement.closest('#main form'));
     if (changed) openEvent(id, true);          // 다른 선생님이 설문·안전 교육·점검 등을 바꿈
-    else if (!$('#ov').classList.contains('show')) renderEvent();
+    else if (!busy) renderEvent();
   }, e => console.error(e));
   startMarksWatch();
 }
@@ -1487,14 +1563,26 @@ document.addEventListener('click', async ev => {
         if (!confirm(`'${x.title}'과(와) 시청 체크 ${(vmap[id] || []).length}개를 지울까요?`)) return;
         await S.deleteSafety(cur.id, id); await touch(); await openEvent(cur.id, true); toast('지웠어요'); break;
       }
-      case 'pack-start-t': cur.teacherItems = packItems(PACK_TEACHER, true); renderEvent(); await saveCur('teacherItems'); toast('교사 준비물 목록을 만들었어요'); break;
-      case 'pack-edit': listForm(el.dataset.kind); break;
-      case 'pack-save': await saveListForm(); break;
+      case 'pack-start-t': cur.teacherItems = packItems(PACK_TEACHER, true); cur.teacherCats = PACK_TEACHER.map(([c]) => ({ name: c })); renderEvent(); await saveCur('teacherItems', 'teacherCats'); toast('교사 준비물 목록을 만들었어요'); break;
+      case 'pack-kind': packKind = id; pq = null; pdel = null; zdel = null; try { localStorage.setItem('fieldcheck-packkind', id); } catch (e) {} rerenderPack(); break;
+      case 'item-edit': pq = { type: 'item', id }; pdel = null; rerenderPack(); break;
+      case 'zone-edit': pq = { type: 'zone', cat: el.dataset.cat }; zdel = null; pdel = null; rerenderPack(); break;
+      case 'pq-cancel': pq = null; zdel = null; rerenderPack(); break;
+      case 'item-del': pdel = id; pq = null; rerenderPack(); break;
+      case 'item-del-no': pdel = null; rerenderPack(); break;
+      case 'item-del-yes': { const zs = zonesOf(packKind); zs.forEach(z => { z.items = z.items.filter(i => i.id !== id); }); pdel = null; await savePack(packKind, zs); rerenderPack(); break; }
+      case 'zone-del': zdel = el.dataset.cat; rerenderPack(); break;
+      case 'zone-del-no': zdel = null; rerenderPack(); break;
+      case 'zone-del-yes': { const zs = zonesOf(packKind).filter(z => z.name !== el.dataset.cat); pq = null; zdel = null; await savePack(packKind, zs); rerenderPack(); break; }
+      case 'zone-new': {
+        const zs = zonesOf(packKind); let n = 1, name = '새 구역';
+        while (zs.some(z => z.name === name)) name = '새 구역 ' + (++n);
+        zs.push({ name, leave: false, items: [] }); await savePack(packKind, zs);
+        pq = { type: 'zone', cat: name }; rerenderPack(); break;
+      }
       case 'pack-qr': packQR(); break;
-      case 'pack-refresh': pcount = await S.countChecks(cur.id, 'student'); renderEvent(); toast(`다 챙겼다고 알린 학생 ${pcount}명`); break;
-      case 'tcheck': { const it = cur.teacherItems.find(x => x.id === id); it.done = el.checked; renderEvent(); await saveCur('teacherItems'); break; }
-      case 'lc-add': ldraft.cats.push({ name: '', leave: false, text: '' }); renderListForm(); break;
-      case 'lc-del': ldraft.cats.splice(Number(el.dataset.i), 1); renderListForm(); break;
+      case 'pack-refresh': pcount = await S.countChecks(cur.id, 'student'); rerenderPack(); toast(`다 챙겼다고 알린 학생 ${pcount}명`); break;
+      case 'tcheck': { const it = cur.teacherItems.find(x => x.id === id); it.done = el.checked; rerenderPack(); await saveCur('teacherItems'); break; }
       case 'copy': await navigator.clipboard.writeText(el.dataset.url); toast('주소를 복사했어요'); break;
       case 'print': document.body.classList.add('printing'); window.print(); document.body.classList.remove('printing'); break;
       case 'full': { const b = $('#qrbox'); if (b.requestFullscreen) b.requestFullscreen(); break; }
@@ -1506,6 +1594,13 @@ document.addEventListener('click', async ev => {
   }
 });
 
+document.addEventListener('submit', async ev => {
+  const f = ev.target.closest('form[data-pf]');
+  if (!f) return;
+  ev.preventDefault();
+  try { await packSubmit(f); } catch (e) { console.error(e); toast('문제가 생겼어요. 잠시 뒤 다시 해 주세요'); }
+});
+document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && (pq || pdel || zdel)) { pq = null; pdel = null; zdel = null; rerenderPack(); } });
 document.addEventListener('input', ev => {
   const t = ev.target;
   if (cdraft && t.dataset.ci !== undefined) { cdraft[Number(t.dataset.ci)][t.dataset.cf] = t.value; return; }
