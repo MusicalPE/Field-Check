@@ -31,16 +31,22 @@ function parseJSON(text) {
     if (['localhost', '127.0.0.1'].includes(location.hostname)) self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
     initializeAppCheck(app, { provider: new ReCaptchaEnterpriseProvider(KEY), isTokenAutoRefreshEnabled: true });
     const ai = getAI(app, { backend: new GoogleAIBackend() });
+    // 문서 초안은 깊이 생각할 필요가 적어서 '생각하는 시간'을 줄여 빠르게 받아요. 안 되는 모델이면 기본값으로 다시 시도.
+    let think = true;
     FCAI.ask = async (prompt, temperature = 0.3) => {
       let last;
       for (const name of MODELS) {
-        try {
-          const model = getGenerativeModel(ai, { model: name, generationConfig: { responseMimeType: 'application/json', temperature } });
-          const res = await model.generateContent(prompt);
-          return parseJSON(res.response.text());
-        } catch (e) {
-          last = e;
-          if (!/not found|404|not supported|unsupported|is not available|invalid model/i.test(String(e && e.message || e))) break;
+        for (const useThink of think ? [true, false] : [false]) {
+          try {
+            const generationConfig = { responseMimeType: 'application/json', temperature, ...(useThink ? { thinkingConfig: { thinkingBudget: 0 } } : {}) };
+            const res = await getGenerativeModel(ai, { model: name, generationConfig }).generateContent(prompt);
+            return parseJSON(res.response.text());
+          } catch (e) {
+            last = e; const m = String(e && e.message || e);
+            if (useThink && /think|budget|invalid argument|400/i.test(m)) { think = false; continue; }
+            if (!/not found|404|not supported|unsupported|is not available|invalid model/i.test(m)) throw e;
+            break;
+          }
         }
       }
       throw last;

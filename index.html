@@ -495,7 +495,7 @@ a.chip{text-decoration:none;display:inline-block}
 <script src="xlsx-export.js?v=1.2.0"></script>
 <script src="wx.js?v=1.2.0"></script>
 <script src="kakao-config.js?v=1.3.1"></script>
-<script type="module" src="ai.js?v=1.3.0"></script>
+<script type="module" src="ai.js?v=1.3.2"></script>
 <script>
 const S = window.Store;
 const $ = s => document.querySelector(s);
@@ -1813,7 +1813,11 @@ ${phase === 'pre' ? `출발 전에 모둠이 함께 하는 "사전 조사" 활�
 - 고르기는 보기 3~4개
 - 확실하지 않은 사실(숫자, 연도)을 정답처럼 단정하지 마. 학생이 현장에서 직접 확인하게 해
 JSON으로만 답해: {"title":"활동지 제목","intro":"학생 화면 맨 위 안내 한두 문장","questions":[{"type":"text","text":"..."},{"type":"choice","text":"...","options":["...","..."]}]}`;
-  const old = btn.innerHTML; btn.disabled = true; btn.textContent = 'AI가 만드는 중...';
+  const old = btn.innerHTML; btn.disabled = true; const t0 = Date.now(); btn.textContent = 'AI가 만드는 중... 0초';
+  const tick = setInterval(() => { if (!btn.isConnected) return clearInterval(tick); btn.textContent = `AI가 만드는 중... ${Math.round((Date.now() - t0) / 1000)}초`; }, 1000);
+  try { return await aiSheetRun(A, prompt, btn, old); } finally { clearInterval(tick); }
+}
+async function aiSheetRun(A, prompt, btn, old) {
   try {
     const r = await A.ask(prompt, 0.6);
     const qs = (r.questions || []).filter(q => q && q.text).slice(0, 10).map(q => ({ id: S.newId(), type: q.type === 'choice' && Array.isArray(q.options) && q.options.length >= 2 ? 'choice' : 'text', text: String(q.text).trim(), ...(q.type === 'choice' && Array.isArray(q.options) && q.options.length >= 2 ? { options: q.options.map(String).slice(0, 6) } : {}) }));
