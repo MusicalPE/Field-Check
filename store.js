@@ -118,6 +118,9 @@
     };
     S.removeView = async (eid, sid, c, n) => vwCol(eid, sid).doc(c + '_' + n).delete();
     S.removeViewLegacy = async (eid, sid, docId) => vwCol(eid, sid).doc(docId).delete();
+    // 선생님끼리 자료 공유 (체험학습 틀)
+    S.saveShare = async (code, data) => db.collection('shares').doc(code).set(data);
+    S.getShare = async code => { const d = await db.collection('shares').doc(code).get(); return d.exists ? d.data() : null; };
     // 학생도 보는 일정표·날씨 지역
     const pubDoc = eid => evRef(eid).collection('pub').doc('info');
     S.getPub = async eid => { const d = await pubDoc(eid).get(); return d.exists ? d.data() : null; };
@@ -290,6 +293,8 @@
       d.responses[k][uid] = { answers, at: Date.now() };
       save(d);
     };
+    S.saveShare = async (code, data) => { const d = load(); d.shares = d.shares || {}; d.shares[code] = data; save(d); };
+    S.getShare = async code => { const x = (load().shares || {})[code]; return x ? clone(x) : null; };
     S.getPub = async eid => { const x = load().pub[eid]; return x ? clone(x) : null; };
     S.savePub = async (eid, data) => { const d = load(); d.pub[eid] = data; save(d); };
     S.listSheets = async eid => Object.entries(load().sheets[eid] || {}).map(([id, h]) => ({ id, ...clone(h) }));

@@ -21,6 +21,13 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/events/$(eid)/safety/$(sid)).data;
     }
 
+    // 선생님끼리 자료 공유: 체험학습 틀만 담김(학생 응답·체크 기록 없음). 선생님 계정이면 누구나 읽기
+    match /shares/{code} {
+      allow read: if isTeacher();
+      allow create: if isTeacher() && code.size() >= 8 && request.resource.data.owner == request.auth.uid;
+      allow delete: if isTeacher() && resource.data.owner == request.auth.uid;
+    }
+
     // 체험학습: 함께하는 선생님만 보고 고칠 수 있음 (학생 익명 계정은 못 만듦)
     match /events/{eid} {
       function memberHere() {

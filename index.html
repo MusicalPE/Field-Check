@@ -10,7 +10,7 @@
 <meta property="og:title" content="체험첵! Field-Check!">
 <meta property="og:description" content="현장체험학습·수학여행 준비부터 당일 인원 점검, 사후 설문까지 선생님이 함께 챙기는 업무 도우미">
 <meta property="og:url" content="https://musicalpe.github.io/Field-Check/">
-<meta property="og:image" content="https://musicalpe.github.io/Field-Check/og-image.png">
+<meta property="og:image" content="https://musicalpe.github.io/Field-Check/og-image.png?v=2">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
@@ -259,6 +259,20 @@ label.f{display:block;font-size:13px;font-weight:800;color:var(--sub);margin:12p
 .qrsm{padding:10px!important}
 @media (max-width:640px){.invite{grid-template-columns:1fr}.invite>div:first-child{display:flex;flex-direction:column;align-items:center}}
 .tabbar{display:none}
+.pfield{position:relative}
+.pdrop{position:absolute;left:0;right:0;top:100%;margin:6px 0 0;z-index:30;list-style:none;padding:6px;background:var(--card);border:1.5px solid var(--line);border-radius:16px;box-shadow:0 16px 40px rgba(34,48,42,.16);max-height:300px;overflow-y:auto}
+.pdrop li{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:10px;cursor:pointer;word-break:keep-all}
+.pdrop li[aria-selected="true"],.pdrop li:hover{background:var(--pri-soft)}
+.pdrop .pn{font-weight:800;font-size:14.5px}.pdrop .pn small{font-weight:400;color:var(--sub);font-size:12px}
+.pdrop .pa{font-size:12.5px;color:var(--sub)}
+.pdrop .pnote{font-size:12.5px;color:var(--sub);cursor:default;background:none!important}
+.pok{color:var(--ok);font-weight:800}
+.wxempty{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.sharelist{display:flex;flex-direction:column;gap:4px;background:var(--soft);border:1px solid var(--line);border-radius:14px;padding:8px 12px}
+.sharelist label{display:flex;align-items:center;gap:8px;padding:5px 0;font-weight:700;font-size:14.5px;cursor:pointer}
+.sharelist label.off{opacity:.5}
+.sharelist input{width:18px;height:18px;accent-color:var(--pri)}
+.sharelist .meta{font-weight:400}
 .plans{display:flex;flex-direction:column;gap:12px}
 .mdays{display:flex;gap:6px;flex-wrap:wrap}
 .mday{border:1.5px solid var(--line);background:var(--soft);color:var(--sub);font-size:13.5px;font-weight:800;border-radius:999px;padding:6px 14px;display:inline-flex;gap:6px;align-items:center}
@@ -443,6 +457,7 @@ a.chip{text-decoration:none;display:inline-block}
 <script src="store.js"></script>
 <script src="xlsx-export.js"></script>
 <script src="wx.js"></script>
+<script src="kakao-config.js"></script>
 <script>
 const S = window.Store;
 const $ = s => document.querySelector(s);
@@ -559,7 +574,7 @@ const PLACE_SHORT = { home: '가정', class: '교실', alone: '혼자', teacher:
 
 function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('show'), 1800); }
 function openModal(html, wide) { $('#md').className = 'md' + (wide ? ' wide' : ''); $('#md').innerHTML = '<button class="x noprint" data-act="close">×</button>' + html; $('#ov').classList.add('show'); }
-function closeModal() { $('#ov').classList.remove('show'); $('#md').innerHTML = ''; draft = null; ldraft = null; rdraft = null; cdraft = null; hdraft = null; }
+function closeModal() { setModalOpen = false; $('#ov').classList.remove('show'); $('#md').innerHTML = ''; draft = null; ldraft = null; rdraft = null; cdraft = null; hdraft = null; }
 
 // ---------- 시작 ----------
 S.onUser(async u => {
@@ -569,6 +584,7 @@ S.onUser(async u => {
   await loadEvents();
   const id = joined ? [0, joined] : location.hash.match(/^#e=(.+)$/);
   if (id && events.find(e => e.id === id[1])) openEvent(id[1]); else renderHome();
+  await handleShare();
 });
 
 function renderLogin() {
@@ -577,7 +593,7 @@ function renderLogin() {
     <img src="logo.png" alt="체험첵! Field-Check!" class="login-logo">
     <p>현장체험학습·수학여행 준비부터 사후 설문까지 한곳에서 챙겨요.</p>
     <button class="btn pri" data-act="login">구글 계정으로 시작하기</button>
-    <div class="hint" style="margin-top:14px">${new URLSearchParams(location.search).get('join') ? '<b style="color:var(--pri)">초대받은 체험학습이 있어요. 로그인하면 바로 함께할 수 있어요.</b>' : '학생은 로그인 없이 QR로만 참여해요.'}</div></div>`;
+    <div class="hint" style="margin-top:14px">${new URLSearchParams(location.search).get('join') ? '<b style="color:var(--pri)">초대받은 체험학습이 있어요. 로그인하면 바로 함께할 수 있어요.</b>' : new URLSearchParams(location.search).get('share') ? '<b style="color:var(--pri)">받은 자료가 있어요. 로그인하면 불러올 수 있어요.</b>' : '학생은 로그인 없이 QR로만 참여해요.'}</div></div>`;
 }
 
 async function loadEvents() {
@@ -618,6 +634,7 @@ function eventForm(e) {
   const isNew = !e;
   e = e || { title: '', kind: '현장체험학습', date: '', endDate: '', target: '', place: '' };
   cdraft = isNew ? [{ id: 'c1', name: '1반', total: 25 }] : classesOf(e).map(c => ({ id: c.id, name: c.name, total: c.total }));
+  pdraft = e.pinfo ? { ...e.pinfo } : (!isNew && pub && pub.place && e.place ? { name: e.place, lat: pub.place.lat, lon: pub.place.lon } : null);
   openModal(`<h3>${isNew ? '새 체험학습' : '체험학습 정보 고치기'}</h3>
     <label class="f">이름</label><input class="in" id="f-title" value="${esc(e.title)}" placeholder="예: 6학년 경주 수학여행">
     <div class="two">
@@ -628,7 +645,10 @@ function eventForm(e) {
       <div><label class="f">출발일</label><input class="in" type="date" id="f-date" value="${e.date}"></div>
       <div><label class="f">돌아오는 날 (하루면 비워 두기)</label><input class="in" type="date" id="f-end" value="${e.endDate || ''}"></div>
     </div>
-    <label class="f">장소</label><input class="in" id="f-place" value="${esc(e.place)}" placeholder="예: 경주 일대">
+    <label class="f" for="f-place">장소</label>
+    <div class="pfield"><input class="in" id="f-place" value="${esc(e.place)}" placeholder="장소 이름을 치면 찾아 줘요 (예: 불국사, 국립경주박물관)" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="f-plist">
+      <ul class="pdrop" id="f-plist" role="listbox" hidden></ul></div>
+    <div class="hint" id="f-plinks"></div>
     <label class="f">반과 인원</label>
     <div id="crows"></div>
     <button class="btn sm" data-act="cf-add">+ 반 더하기</button>
@@ -636,7 +656,7 @@ function eventForm(e) {
     ${isNew ? '<div class="note">만들면 출발일을 기준으로 기본 업무 일정(15개)이 들어가요. 다른 반 선생님은 만든 뒤 "선생님 초대"로 함께할 수 있어요.</div>' : ''}
     <div class="mact">${!isNew && e.owner === user.uid ? '<button class="btn warn" data-act="del-event">이 체험학습 지우기</button>' : ''}<div class="sp"></div>
       <button class="btn" data-act="close">취소</button><button class="btn pri" data-act="save-event">${isNew ? '만들기' : '저장'}</button></div>`);
-  renderClassRows();
+  renderClassRows(); renderPlaceLinks();
   $('#f-title').focus();
 }
 function renderClassRows() {
@@ -659,7 +679,11 @@ async function saveEventForm() {
     if (!(c.total >= 1 && c.total <= 60)) return toast(`${c.name} 인원을 1~60명으로 적어 주세요`);
   }
   if (new Set(cdraft.map(c => c.name)).size !== cdraft.length) return toast('반 이름이 겹쳐요');
-  const base = { title, date, endDate, kind: $('#f-kind').value, target: $('#f-target').value.trim(), place: $('#f-place').value.trim(),
+  const placeTxt = $('#f-place').value.trim();
+  if (placeTxt && !(pdraft && pdraft.lat)) { const auto = await autoPlace(placeTxt); if (auto) pdraft = { ...auto, name: placeTxt }; }
+  if (!placeTxt) pdraft = null;
+  const pinfo = pdraft && pdraft.lat ? { name: placeTxt, addr: pdraft.addr || '', url: pdraft.url || '', lat: pdraft.lat, lon: pdraft.lon } : null;
+  const base = { title, date, endDate, kind: $('#f-kind').value, target: $('#f-target').value.trim(), place: placeTxt, pinfo,
     classes: classMap(cdraft), updatedAt: Date.now() };
   const wasNew = !cur;
   let id;
@@ -673,9 +697,18 @@ async function saveEventForm() {
     Object.assign(cur, base);
     await syncChildren();
   }
+  // 날씨 지역은 장소에서 자동으로
+  if (pinfo) {
+    const old = await S.getPub(id), op = old && old.place;
+    if (!op || op.lat !== pinfo.lat || op.lon !== pinfo.lon) {
+      const np = { owner: user.uid, plans: [], ...(old || {}), place: { name: pinfo.name, lat: pinfo.lat, lon: pinfo.lon }, eventTitle: title, date, endDate, updatedAt: Date.now() };
+      await S.savePub(id, np); if (cur && cur.id === id) { pub = np; wxData = null; wxFor = ''; }
+    }
+  }
   closeModal();
   await loadEvents();
-  openEvent(id);
+  await openEvent(id);
+  if (!wasNew) loadWx();
   toast(wasNew ? '만들었어요' : '저장했어요');
 }
 const myName = () => (user && (user.displayName || (user.email || '').split('@')[0])) || '선생님';
@@ -755,7 +788,7 @@ function renderEvent() {
       <div class="meta">${dateRange(e)}${e.place ? ' · ' + esc(e.place) : ''}${e.target ? ' · ' + esc(e.target) : ''} · ${classesOf(e).map(c => `${esc(c.name)} ${c.total}명`).join(', ')}</div>
       </div>
       <div class="mcol"><div class="meter">${meter(e)}</div>
-        <button class="btn sm setbtn ${tab === 'set' ? 'pri' : ''}" data-act="tab" data-tab="set"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg>설정</button></div>
+        <button class="btn sm setbtn" data-act="set-modal"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg>설정</button></div>
       <div class="full">${membersCard()}${classFilterBar()}</div>
     </div>
     <div class="tabs">${tabs.map(([k, a, b]) => `<button class="tab ${tab === k ? 'on' : ''}" data-act="tab" data-tab="${k}">${a}<small>${b}</small></button>`).join('')}</div>
@@ -1571,8 +1604,13 @@ async function installGo() {
   try { const c = await installEvt.userChoice; if (c && c.outcome === 'accepted') lsSet(IKEY, '1'); } catch (e) {}
   installEvt = null; if (!cur) renderHome();
 }
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.1.0';
 const NEWS = [
+  { v: '1.1.0', d: '2026. 10. 28.', items: [
+    '자료 공유: 업무, 일정, 준비물, 안전 교육, 설문, 활동지, 인원 점검 시간을 짧은 주소·QR로 다른 선생님께 보내고 불러오기',
+    '장소 찾기: 장소 이름을 치면 카카오 장소 검색으로 찾고, 고른 곳으로 날씨 예보가 저절로 맞춰짐',
+    'PC에서 설정은 팝업으로 열림',
+  ] },
   { v: '1.0.0', d: '2026. 10. 28.', items: [
     '사전: 출발일 기준 업무 일정표, 안전 교육(영상 90% 시청 확인·번호 체크·실시 기록 복사), 준비물 체크리스트(학생·가정용 QR, 인솔 교사용)',
     '당일: 정해진 시간마다 인원 점검 — 학생은 QR로 반·번호를 누르고, 선생님은 실시간 번호표로 확인',
@@ -1582,7 +1620,10 @@ const NEWS = [
   ] },
 ];
 let setOpen = { news: false, install: false, del: false };
-function setTab() {
+let setModalOpen = false;
+function setModal() { setModalOpen = true; openModal(setTab(true)); }
+function refreshSet() { if (setModalOpen && $('#md .setcard')) setModal(); else renderEvent(); }
+function setTab(inModal) {
   const isOwner = cur.owner === user.uid;
   const names = cur.memberNames || {}, ids = cur.members && cur.members.length ? cur.members : [cur.owner];
   const row = (title, desc, btn) => `<div class="set-row"><div><b>${title}</b><p>${desc}</p></div>${btn}</div>`;
@@ -1594,16 +1635,17 @@ function setTab() {
           <div style="display:flex;gap:6px"><button class="btn sm warn" data-act="set-del-yes">지우기</button><button class="btn sm" data-act="set-del-no">취소</button></div></div>`
       : row('이 체험학습 지우기', '함께하는 선생님 화면에서도 모두 사라져요.', '<button class="btn sm warn" data-act="set-del">지우기</button>'))
     : row('이 체험학습에서 나가기', '나만 빠지고, 자료와 다른 선생님은 그대로예요.', '<button class="btn sm warn" data-act="team-leave">나가기</button>');
-  return `<div style="max-width:820px"><div class="card setcard">
+  return `${inModal ? '' : '<div style="max-width:820px">'}<div class="${inModal ? '' : 'card '}setcard">
     <h3 class="st">설정</h3>
     ${row('체험학습 정보 고치기', `${esc(cur.title)} · ${dateRange(cur)}<br>${classesOf(cur).map(c => `${esc(c.name)} ${c.total}명`).join(', ')}`, '<button class="chip" data-act="edit-event">고치기</button>')}
     ${row('함께하는 선생님', `${ids.map(u => esc(names[u] || '선생님')).join(', ')}<br>초대 QR과 링크로 동료 선생님을 불러요`, '<button class="chip" data-act="team">초대·관리</button>')}
+    ${row('자료 공유하기', '이 체험학습의 틀(업무, 일정, 준비물, 안전 교육, 설문, 활동지)을 짧은 주소와 QR로 다른 선생님께 보내요.', '<button class="chip" data-act="share">보내기</button>')}
     ${row('업데이트 소식', `지금 ${APP_VERSION}`, `<button class="chip" data-act="set-news">${setOpen.news ? '닫기' : '보기'}</button>`)}${news}
     ${row('개인정보처리방침', '어떤 정보를 어디에 두는지 알려 드려요.', '<a class="chip" href="privacy.html" target="_blank" rel="noopener">보기</a>')}
     ${STANDALONE ? '' : row('앱으로 설치하기', '홈 화면에 체험첵! 아이콘을 만들어요.', `<button class="chip" data-act="set-install">${installEvt ? '설치' : (setOpen.install ? '닫기' : '설치 방법')}</button>`) + inst}
     ${S.mode === 'demo' ? '' : row('로그아웃', esc(user.email || user.displayName || ''), '<button class="chip" data-act="logout">로그아웃</button>')}
     ${danger}
-  </div></div>`;
+  </div>${inModal ? '' : '</div>'}`;
 }
 function moreMenu() {
   openModal(`<h3>더보기</h3><div class="morelist">
@@ -1784,24 +1826,89 @@ function planSection() {
       </form>
     </div></div>`;
 }
+// ---------- 장소 찾기 (카카오 장소 검색, 안 되면 지역 이름 검색) ----------
+let pdraft = null, kakaoPlaces = null, kakaoWhy = '', pTimer = null, pItems = [], pSel = -1, pSeq = 0, pNote = '';
+const mapUrl = (pi, name) => (pi && pi.url) || 'https://map.kakao.com/link/search/' + encodeURIComponent(name || '');
+function loadKakao() {
+  if (kakaoPlaces !== null) return Promise.resolve(kakaoPlaces);
+  const key = (window.KAKAO_JS_KEY || '').trim();
+  if (!key) { kakaoPlaces = false; return Promise.resolve(false); }
+  return new Promise(res => {
+    const sc = document.createElement('script');
+    sc.src = 'https://dapi.kakao.com/v2/maps/sdk.js?appkey=' + encodeURIComponent(key) + '&libraries=services&autoload=false';
+    const fail = why => { kakaoPlaces = false; kakaoWhy = why; res(false); };
+    const tm = setTimeout(() => fail('카카오 검색이 응답하지 않아 지역 이름으로 찾았어요.'), 6000);
+    sc.onload = () => { try { kakao.maps.load(() => { clearTimeout(tm); kakaoPlaces = new kakao.maps.services.Places(); res(kakaoPlaces); }); } catch (e) { clearTimeout(tm); fail('카카오 검색을 켜지 못해 지역 이름으로 찾았어요.'); } };
+    sc.onerror = () => { clearTimeout(tm); sc.remove(); fail('카카오 검색을 불러오지 못해 지역 이름으로 찾았어요.'); };
+    document.head.appendChild(sc);
+  });
+}
+async function findPlaces(q) {
+  const ps = await loadKakao();
+  if (ps) {
+    const got = await new Promise(res => ps.keywordSearch(q, (data, st) => res(st === kakao.maps.services.Status.OK ? data : st === kakao.maps.services.Status.ZERO_RESULT ? [] : null), { size: 8 }));
+    if (got) return got.map(d => ({ name: d.place_name, addr: d.road_address_name || d.address_name, url: d.place_url, lat: +d.y, lon: +d.x, cat: (d.category_name || '').split(' > ').pop() }));
+  }
+  const r = await WX.search(q);
+  return r.map(x => ({ name: x.name, addr: x.sub, url: '', lat: x.lat, lon: x.lon }));
+}
+async function autoPlace(q) {
+  try { return (await Promise.race([findPlaces(q), new Promise(r => setTimeout(() => r([]), 5000))]))[0] || null; } catch (e) { return null; }
+}
+function renderPlaceLinks() {
+  const el = $('#f-plinks'); if (!el) return;
+  const name = $('#f-place').value.trim();
+  el.innerHTML = !name ? '날씨 예보와 지도 링크에 쓰여요.'
+    : pdraft && pdraft.lat ? `<span class="pok">✓ ${esc(pdraft.addr || pdraft.name)}</span> · <a href="${esc(mapUrl(pdraft, name))}" target="_blank" rel="noopener">카카오맵</a> · 날씨 예보도 이곳으로 나와요`
+    : '목록에서 고르면 날씨 예보가 이곳으로 맞춰져요. 안 골라도 저장할 때 가장 가까운 곳으로 찾아요.';
+}
+function showPlaces() {
+  const ul = $('#f-plist'), inp = $('#f-place'); if (!ul) return;
+  ul.innerHTML = pItems.map((p, i) => `<li role="option" data-pi="${i}" aria-selected="${i === pSel}"><span class="pn">${esc(p.name)}${p.cat ? ` <small>${esc(p.cat)}</small>` : ''}</span>${p.addr ? `<span class="pa">${esc(p.addr)}</span>` : ''}</li>`).join('')
+    + (pNote ? `<li class="pnote" role="presentation">${esc(pNote)}</li>` : '');
+  ul.hidden = !ul.innerHTML; inp.setAttribute('aria-expanded', String(!ul.hidden));
+}
+function closePlaces() { const ul = $('#f-plist'); if (ul) ul.hidden = true; pSel = -1; }
+async function searchPlaces() {
+  const q = $('#f-place').value.trim(), seq = ++pSeq;
+  if (q.length < 2) { pItems = []; pNote = ''; closePlaces(); return; }
+  let r = [];
+  try { r = await findPlaces(q); pNote = r.length ? (kakaoPlaces ? '' : kakaoWhy) : '찾은 곳이 없어요. 이름을 조금 바꿔 보세요.'; } catch (e) { pNote = '찾지 못했어요. 인터넷 연결을 확인해 주세요.'; }
+  if (seq !== pSeq || !$('#f-place')) return;
+  pItems = r; pSel = -1; showPlaces();
+}
+function pickPlace(i) {
+  const p = pItems[i]; if (!p) return;
+  pdraft = { ...p }; $('#f-place').value = p.name; closePlaces(); renderPlaceLinks();
+}
+document.addEventListener('input', ev => {
+  if (ev.target.id !== 'f-place') return;
+  pdraft = null; renderPlaceLinks(); clearTimeout(pTimer); pTimer = setTimeout(searchPlaces, 280);
+});
+document.addEventListener('keydown', ev => {
+  if (ev.target.id !== 'f-place') return;
+  const ul = $('#f-plist'), open = ul && !ul.hidden && pItems.length;
+  if (ev.key === 'ArrowDown' && open) { ev.preventDefault(); pSel = (pSel + 1) % pItems.length; showPlaces(); }
+  else if (ev.key === 'ArrowUp' && open) { ev.preventDefault(); pSel = (pSel - 1 + pItems.length) % pItems.length; showPlaces(); }
+  else if (ev.key === 'Enter') { ev.preventDefault(); if (open) pickPlace(pSel >= 0 ? pSel : 0); else { clearTimeout(pTimer); searchPlaces(); } }
+  else if (ev.key === 'Escape' && open) { ev.stopPropagation(); closePlaces(); }
+}, true);
+document.addEventListener('mousedown', ev => { const li = ev.target.closest && ev.target.closest('#f-plist li[data-pi]'); if (li) { ev.preventDefault(); pickPlace(Number(li.dataset.pi)); } });
+document.addEventListener('focusout', ev => { if (ev.target.id === 'f-place') setTimeout(closePlaces, 150); });
+
 function weatherCard() {
   const place = pub && pub.place;
   let body;
-  if (!place || wxPick !== null) {
-    const results = Array.isArray(wxPick) ? wxPick : [];
-    body = `<div class="meta">체험학습 지역을 고르면 날짜별 날씨 예보가 나와요.</div>
-      <div class="wxchips">${WX.PLACES.map(p => `<button class="chip" data-act="wx-set" data-n="${esc(p.name)}" data-lat="${p.lat}" data-lon="${p.lon}">${esc(p.name)}</button>`).join('')}</div>
-      <form class="add" data-pf="wx-search" style="margin-top:10px"><input name="q" placeholder="다른 곳 찾기 (예: 단양, 보령, 태안)" autocomplete="off"><button type="submit">찾기</button></form>
-      ${results.length ? `<div class="wxchips" style="margin-top:8px">${results.map(p => `<button class="chip" data-act="wx-set" data-n="${esc(p.name)}" data-lat="${p.lat}" data-lon="${p.lon}">${esc(p.name)} <span class="meta">${esc(p.sub)}</span></button>`).join('')}</div>` : ''}
-      ${wxErr ? `<div class="hint" style="color:var(--warn)">${esc(wxErr)}</div>` : ''}
-      ${place ? '<button class="ib" data-act="wx-cancel">취소</button>' : ''}`;
+  if (!place) {
+    body = `<div class="wxempty"><div class="meta">체험학습 장소를 고르면 날짜별 날씨 예보가 저절로 나와요.</div>
+      <button class="btn sm" data-act="edit-event">장소 고르기</button></div>`;
   } else {
     const end = parseD(cur.endDate || cur.date);
     body = end < today() ? `<div class="meta">${esc(place.name)} · 지난 체험학습이에요.</div>`
       : wxData ? WX.table(tripDays(), wxData) : `<div class="meta">${wxErr ? esc(wxErr) : '날씨 예보를 불러오는 중이에요…'}</div>`;
   }
   return `<div class="sec" id="wxsec"><div class="rowb"><h3 style="margin:0;font-size:16px">날씨${place ? ` <span class="meta" style="font-family:var(--f-body);font-size:13px">${esc(place.name)}</span>` : ''}</h3>
-    ${place && wxPick === null ? '<button class="btn sm" data-act="wx-change">지역 바꾸기</button>' : ''}</div>
+    ${place ? `<a class="btn sm" href="${esc(mapUrl(cur.pinfo, place.name))}" target="_blank" rel="noopener">카카오맵</a>` : ''}</div>
     <div class="card">${body}</div></div>`;
 }
 async function loadWx() {
@@ -1823,6 +1930,137 @@ function planQR() {
 }
 
 if (/KAKAOTALK/i.test(navigator.userAgent)) setTimeout(() => toast('카카오톡 안에서는 로그인이 안 돼요. 기본 브라우저로 열고 있어요. 안 열리면 오른쪽 위 [⋮] → [다른 브라우저로 열기]를 눌러 주세요.'), 900);
+// ---------- 선생님끼리 자료 공유 ----------
+const SHARE_PARTS = [
+  ['tasks', '업무 일정표'], ['plans', '일정표·날씨 지역'], ['safety', '안전 교육'], ['studentPack', '학생 준비물'],
+  ['teacherPack', '인솔 교사 준비물'], ['surveys', '설문 (사전·사후)'], ['sheets', '모둠 활동지'], ['roll', '인원 점검 시간'],
+];
+function shareCounts() {
+  return {
+    tasks: (cur.tasks || []).length, plans: plansOf().length + (pub && pub.place ? 1 : 0), safety: safeties.length,
+    studentPack: plist ? plist.items.length : 0, teacherPack: (cur.teacherItems || []).length,
+    surveys: surveys.length, sheets: sheets.length, roll: roll ? Object.keys(roll.slots).length : 0,
+  };
+}
+function buildShare(chosen, title, note) {
+  const days = tripDays(), P = {};
+  if (chosen.tasks) P.tasks = (cur.tasks || []).map(t => ({ t: t.t, d: t.d }));
+  if (chosen.plans) { P.plans = plansOf().map(p => ({ day: p.day, time: p.time || '', title: p.title, memo: p.memo || '' })); if (pub && pub.place) P.place = pub.place; }
+  if (chosen.safety) P.safety = safeties.map(s => ({ title: s.title, videos: s.videos, memo: s.memo || '', requireWatch: s.requireWatch !== false }));
+  if (chosen.studentPack && plist) P.studentPack = { cats: zonesOf('student').map(z => ({ name: z.name, leave: !!z.leave })), items: plist.items.map(i => ({ cat: i.cat, t: i.t, ...(i.imp ? { imp: true } : {}), ...(i.leave ? { leave: true } : {}) })) };
+  if (chosen.teacherPack && cur.teacherItems) P.teacherPack = { cats: zonesOf('teacher').map(z => ({ name: z.name })), items: cur.teacherItems.map(i => ({ cat: i.cat, t: i.t, ...(i.imp ? { imp: true } : {}) })) };
+  if (chosen.surveys) P.surveys = surveys.map(s => ({ title: s.title, phase: phaseOf(s), questions: s.questions.map(q => ({ type: q.type, text: q.text, ...(q.options ? { options: q.options } : {}) })) }));
+  if (chosen.sheets) P.sheets = sheets.map(h => ({ title: h.title, intro: h.intro || '', phase: h.phase, groupNames: groupsOf(h).map(g => g.name), questions: h.questions.map(q => ({ type: q.type, text: q.text, ...(q.options ? { options: q.options } : {}) })) }));
+  if (chosen.roll && roll) P.roll = { before: roll.before, after: roll.after, slots: sortedSlots().map(s => ({ day: days.indexOf(s.date) + 1, time: s.time, label: s.label })).filter(s => s.day > 0) };
+  return { title, note, kind: cur.kind, days: days.length, from: myName(), owner: user.uid, createdAt: Date.now(), parts: P };
+}
+function shareModal() {
+  const c = shareCounts();
+  openModal(`<h3>자료 공유하기</h3>
+    <div class="meta">이 체험학습의 틀을 짧은 주소와 QR로 보내요. 받은 선생님은 새 체험학습으로 만들거나, 자기 체험학습에 더할 수 있어요. <b>학생 응답, 체크 기록, 반 구성, 함께하는 선생님은 담기지 않아요.</b></div>
+    <label class="f">공유 이름</label><input class="in" id="sh-title" value="${esc(cur.title)} 세트" placeholder="예: 경주 수학여행 2박 3일 세트">
+    <label class="f">한 줄 소개 (선택)</label><input class="in" id="sh-note" placeholder="예: 불국사·석굴암·첨성대 코스, 모둠 미션 4개">
+    <label class="f">보낼 것</label>
+    <div class="sharelist">${SHARE_PARTS.map(([k, l]) => `<label class="${c[k] ? '' : 'off'}"><input type="checkbox" data-part="${k}" ${c[k] ? 'checked' : 'disabled'}> ${l} <span class="meta">${c[k] ? c[k] + '개' : '없음'}</span></label>`).join('')}</div>
+    <div class="note">공유 주소를 아는 선생님은 누구나(체험첵!에 로그인하면) 내용을 볼 수 있어요. 인디스쿨이나 메신저에 올려도 돼요. 학교 이름이나 선생님 실명이 들어간 글은 미리 고쳐 주세요.</div>
+    <div class="mact"><div class="sp"></div><button class="btn" data-act="close">취소</button><button class="btn pri" data-act="share-make">공유 주소 만들기</button></div>`);
+}
+async function makeShare() {
+  const chosen = {}; document.querySelectorAll('[data-part]').forEach(x => { if (x.checked) chosen[x.dataset.part] = true; });
+  if (!Object.keys(chosen).length) return toast('보낼 것을 하나 이상 골라 주세요');
+  const title = $('#sh-title').value.trim() || cur.title, note = $('#sh-note').value.trim();
+  const code = newCode() + newCode().slice(0, 2);
+  await S.saveShare(code, buildShare(chosen, title, note));
+  const u = new URL('index.html', location.href); u.hash = ''; u.search = `?share=${code}`;
+  qrModal({ url: u.toString(), title: `${title}`, sub: '이 주소나 QR을 받은 선생님이 체험첵!에서 불러올 수 있어요', note: '' });
+}
+
+let incoming = null;
+async function handleShare() {
+  const code = new URLSearchParams(location.search).get('share');
+  if (!code) return;
+  history.replaceState(null, '', location.pathname);
+  try { incoming = await S.getShare(code); } catch (e) { incoming = null; }
+  if (!incoming) { toast('공유 자료를 찾을 수 없어요. 주소를 다시 확인해 주세요'); return; }
+  importModal();
+}
+function importModal() {
+  const P = incoming.parts, names = Object.fromEntries(SHARE_PARTS);
+  const cnt = { tasks: (P.tasks || []).length, plans: (P.plans || []).length + (P.place ? 1 : 0), safety: (P.safety || []).length,
+    studentPack: P.studentPack ? P.studentPack.items.length : 0, teacherPack: P.teacherPack ? P.teacherPack.items.length : 0,
+    surveys: (P.surveys || []).length, sheets: (P.sheets || []).length, roll: P.roll ? P.roll.slots.length : 0 };
+  const have = SHARE_PARTS.filter(([k]) => cnt[k]);
+  openModal(`<h3>받은 자료: ${esc(incoming.title)}</h3>
+    <div class="meta">${incoming.from ? esc(incoming.from) + ' 선생님이 보냄 · ' : ''}${incoming.days}일 일정${incoming.note ? ' · ' + esc(incoming.note) : ''}</div>
+    <label class="f">불러올 것</label>
+    <div class="sharelist">${have.map(([k]) => `<label><input type="checkbox" data-ipart="${k}" checked> ${names[k]} <span class="meta">${cnt[k]}개</span></label>`).join('')}</div>
+    <label class="f">어디로 불러올까요?</label>
+    <div class="sharelist">
+      <label><input type="radio" name="itarget" value="new" checked> 새 체험학습으로 만들기</label>
+      ${events.map(e => `<label><input type="radio" name="itarget" value="${e.id}"> ${esc(e.title)} <span class="meta">${dateRange(e)}에 더하기</span></label>`).join('')}
+    </div>
+    <div id="inew">
+      <label class="f">새 체험학습 이름</label><input class="in" id="i-title" value="${esc(incoming.title.replace(/\s*세트$/, ''))}">
+      <div class="two"><div><label class="f">출발일</label><input class="in" type="date" id="i-date"></div>
+        <div><label class="f">돌아오는 날</label><input class="in" type="date" id="i-end"></div></div>
+      <div class="hint">반과 인원은 만든 뒤 "정보 고치기"에서 정해요.</div>
+    </div>
+    <div class="note">이미 있는 체험학습에 더하면 업무와 일정은 뒤에 붙고, 준비물은 없는 항목만 더해져요. 안전 교육, 설문, 활동지는 새로 하나씩 생겨요.</div>
+    <div class="mact"><div class="sp"></div><button class="btn" data-act="close">나중에</button><button class="btn pri" data-act="import-go">불러오기</button></div>`);
+}
+async function importShare() {
+  const P = incoming.parts, take = {}; document.querySelectorAll('[data-ipart]').forEach(x => { if (x.checked) take[x.dataset.ipart] = true; });
+  const tgt = (document.querySelector('[name=itarget]:checked') || {}).value || 'new';
+  let eid;
+  if (tgt === 'new') {
+    const title = $('#i-title').value.trim(), date = $('#i-date').value; let end = $('#i-end').value;
+    if (!title) return toast('이름을 적어 주세요'); if (!date) return toast('출발일을 골라 주세요');
+    if (!end && incoming.days > 1) { const d = addDays(parseD(date), incoming.days - 1); end = ymd(d); }
+    if (end && end < date) return toast('돌아오는 날이 출발일보다 빨라요'); if (end === date) end = '';
+    eid = S.newId();
+    const tasks = take.tasks && P.tasks ? P.tasks.map(t => ({ id: S.newId(), t: t.t, d: t.d, done: false })) : DEFAULT_TASKS.map(([d, t]) => ({ id: S.newId(), t, d, done: false }));
+    await S.saveEvent({ id: eid, owner: user.uid, members: [user.uid], memberNames: { [user.uid]: myName() }, title, date, endDate: end, kind: incoming.kind || '현장체험학습',
+      target: '', place: '', classes: classMap([{ id: 'c1', name: '1반', total: 25 }]), tasks, createdAt: Date.now(), updatedAt: Date.now() });
+    await loadEvents(); cur = events.find(e => e.id === eid);
+    delete take.tasks;
+  } else { eid = tgt; await loadEvents(); cur = events.find(e => e.id === eid); }
+  // 지금 체험학습 자료 읽기
+  plist = await S.getList(eid, 'student'); roll = await S.getRoll(eid); pub = await S.getPub(eid);
+  const classes = classMap(classesOf(cur)), days = tripDays(), now = Date.now();
+  if (take.tasks && P.tasks) { cur.tasks = [...(cur.tasks || []), ...P.tasks.map(t => ({ id: S.newId(), t: t.t, d: t.d, done: false }))]; await saveCur('tasks'); }
+  const mergePack = (mine, theirs) => {
+    const cats = [...(mine.cats || [])], items = [...(mine.items || [])];
+    theirs.cats.forEach(c => { if (!cats.some(x => x.name === c.name)) cats.push(c); });
+    theirs.items.forEach(i => { if (!items.some(x => x.cat === i.cat && x.t === i.t)) items.push({ ...i, id: S.newId() }); });
+    return { cats, items };
+  };
+  if (take.studentPack && P.studentPack) {
+    const m = mergePack(plist || {}, P.studentPack);
+    plist = { owner: user.uid, eventTitle: cur.title, date: cur.date, endDate: cur.endDate || '', note: '', ...(plist || {}), cats: m.cats, items: m.items, createdAt: (plist && plist.createdAt) || now, updatedAt: now };
+    await S.saveList(eid, 'student', plist);
+  }
+  if (take.teacherPack && P.teacherPack) {
+    const m = mergePack({ cats: cur.teacherCats || [], items: cur.teacherItems || [] }, P.teacherPack);
+    cur.teacherCats = m.cats; cur.teacherItems = m.items.map(i => ({ ...i, done: !!i.done })); await saveCur('teacherCats', 'teacherItems');
+  }
+  for (const s of (take.safety && P.safety) || []) await S.saveSafety(eid, { id: S.newId(), ...s, classes, classDate: '', classPeriod: '', planText: '', open: true, owner: user.uid, eventTitle: cur.title, createdAt: now, updatedAt: now });
+  for (const s of (take.surveys && P.surveys) || []) await S.saveSurvey(eid, { id: S.newId(), title: s.title, phase: s.phase, questions: s.questions.map(q => ({ ...q, id: S.newId() })), open: true, owner: user.uid, eventTitle: cur.title, createdAt: now, updatedAt: now });
+  for (const h of (take.sheets && P.sheets) || []) {
+    const groups = {}; h.groupNames.forEach((n, i) => { groups['g' + S.newId()] = { name: n, order: i }; });
+    await S.saveSheet(eid, { id: S.newId(), title: h.title, intro: h.intro, phase: h.phase, groups, questions: h.questions.map(q => ({ ...q, id: S.newId() })), open: true, owner: user.uid, eventTitle: cur.title, createdAt: now, updatedAt: now });
+  }
+  if (take.roll && P.roll && !roll) {
+    const slots = P.roll.slots.filter(s => s.day <= days.length).map(s => ({ id: S.newId(), date: days[s.day - 1], time: s.time, label: s.label }));
+    roll = null; roll = buildRoll(slots, P.roll.before, P.roll.after); await S.saveRoll(eid, roll);
+  }
+  if (take.plans && (P.plans || P.place)) {
+    const plans = [...((pub && pub.plans) || []), ...(P.plans || []).filter(p => p.day <= days.length).map(p => ({ ...p, id: S.newId() }))];
+    await savePub({ plans, ...(P.place && !(pub && pub.place) ? { place: P.place } : {}) });
+  }
+  await touch();
+  incoming = null; closeModal(); await loadEvents(); await openEvent(eid); toast('자료를 불러왔어요');
+}
+
 // ---------- 이벤트 연결 ----------
 document.addEventListener('click', async ev => {
   const el = ev.target.closest('[data-act]');
@@ -1849,11 +2087,12 @@ document.addEventListener('click', async ev => {
         break;
       }
       case 'install-go': closeModal(); await installGo(); break;
-      case 'set-news': setOpen.news = !setOpen.news; renderEvent(); break;
-      case 'set-install': if (installEvt) await installGo(); else { setOpen.install = !setOpen.install; renderEvent(); } break;
-      case 'set-del': setOpen.del = true; renderEvent(); break;
-      case 'set-del-no': setOpen.del = false; renderEvent(); break;
-      case 'set-del-yes': setOpen.del = false; await S.deleteEvent(cur.id); await loadEvents(); renderHome(); toast('지웠어요'); break;
+      case 'set-modal': setModal(); break;
+      case 'set-news': setOpen.news = !setOpen.news; refreshSet(); break;
+      case 'set-install': if (installEvt) await installGo(); else { setOpen.install = !setOpen.install; refreshSet(); } break;
+      case 'set-del': setOpen.del = true; refreshSet(); break;
+      case 'set-del-no': setOpen.del = false; refreshSet(); break;
+      case 'set-del-yes': setOpen.del = false; closeModal(); await S.deleteEvent(cur.id); await loadEvents(); renderHome(); toast('지웠어요'); break;
       case 'install-later': try { sessionStorage.setItem('fieldcheck-install-later', '1'); } catch (e) {} renderHome(); break;
       case 'toggle': {
         const t = cur.tasks.find(x => x.id === id); t.done = el.checked; renderEvent(); await saveCur('tasks'); break;
@@ -1892,6 +2131,9 @@ document.addEventListener('click', async ev => {
       case 'pack-start-s': await startStudentList(); break;
       case 'sf-new': safetyForm(); break;
       case 'sh-new': sheetForm(null, id); break;
+      case 'share': shareModal(); break;
+      case 'share-make': await makeShare(); break;
+      case 'import-go': await importShare(); break;
       case 'plan-day': planDay = Number(id); pedit = null; rerenderPlan(); break;
       case 'plan-edit': pedit = id; rerenderPlan(); break;
       case 'plan-cancel': pedit = null; rerenderPlan(); break;
@@ -2043,6 +2285,7 @@ document.addEventListener('input', ev => {
 });
 document.addEventListener('change', ev => {
   const t = ev.target;
+  if (t.name === 'itarget') { const n = $('#inew'); if (n) n.hidden = t.value !== 'new'; return; }
   if (t.id === 't-side') { $('#t-due').textContent = fmt(addDays(parseD(cur.date), taskOffset())) + '까지'; return; }
   if (hdraft && t.dataset.hf === 'type') {
     const q = hdraft.questions[Number(t.dataset.hi)]; q.type = t.value;
