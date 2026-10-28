@@ -88,6 +88,7 @@
     tr,.box,.qr{break-inside:avoid}
     h2{break-after:avoid}
     .wx-hint{display:none}
+    .pr-hide{display:none!important}
   }
 </style>
 </head>
@@ -393,6 +394,16 @@ function render() {
   partsBar([...app.querySelectorAll('[data-sec]')].map(s => [s.dataset.sec, s.querySelector('h2').textContent]));
   applyParts(); drawQrs(); app.querySelectorAll('textarea.note').forEach(grow);
 }
+// 인쇄할 때 비어 있는 글칸은 제목째 빼기
+window.addEventListener('beforeprint', () => {
+  app.querySelectorAll('textarea.note').forEach(t => {
+    if (t.value.trim()) return;
+    const h = t.previousElementSibling, sec = t.closest('[data-sec]');
+    if (h && h.tagName === 'H3') h.classList.add('pr-hide');
+    if (sec && sec.querySelectorAll('textarea.note').length === 1 && !sec.querySelector('table,ul,ol,.box,.qr,.wxwrap')) sec.classList.add('pr-hide');
+  });
+});
+window.addEventListener('afterprint', () => app.querySelectorAll('.pr-hide').forEach(x => x.classList.remove('pr-hide')));
 function grow(t) { t.style.height = 'auto'; t.style.height = Math.max(t.scrollHeight + 4, 70) + 'px'; }
 </script>
 </body>
