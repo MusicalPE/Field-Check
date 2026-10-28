@@ -238,6 +238,10 @@ label.f{display:block;font-size:13px;font-weight:800;color:var(--sub);margin:12p
 .qrsm{padding:10px!important}
 @media (max-width:640px){.invite{grid-template-columns:1fr}.invite>div:first-child{display:flex;flex-direction:column;align-items:center}}
 .tabbar{display:none}
+.mcol{display:flex;flex-direction:column;gap:8px;align-items:stretch}
+.setbtn{display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.setbtn svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+@media (max-width:640px){.setbtn{display:none}}
 .setcard{display:flex;flex-direction:column;gap:14px}
 .setcard .st{margin:0}
 .set-row{display:flex;gap:14px;align-items:center;justify-content:space-between;border-top:1.5px dashed var(--line);padding-top:14px}
@@ -653,7 +657,7 @@ function setNav(inEvent) {
 function renderEvent() {
   const e = cur;
   setNav(true);
-  const tabs = [['pre', '사전', '준비'], ['day', '당일', '현장'], ['post', '사후', '정리'], ['set', '설정', '관리']];
+  const tabs = [['pre', '사전', '준비'], ['day', '당일', '현장'], ['post', '사후', '정리']];
   $('#main').innerHTML = `
     <div class="rowb evtop"><button class="btn sm" data-act="home">← 목록</button><div style="display:flex;gap:6px"><button class="btn sm" data-act="edit-event">정보 고치기</button>${S.mode === 'demo' ? '' : '<button class="btn sm" data-act="logout">로그아웃</button>'}</div></div>
     <div class="card evhead">
@@ -661,7 +665,8 @@ function renderEvent() {
       <h2>${esc(e.title)}</h2>
       <div class="meta">${dateRange(e)}${e.place ? ' · ' + esc(e.place) : ''}${e.target ? ' · ' + esc(e.target) : ''} · ${classesOf(e).map(c => `${esc(c.name)} ${c.total}명`).join(', ')}</div>
       </div>
-      <div class="meter">${meter(e)}</div>
+      <div class="mcol"><div class="meter">${meter(e)}</div>
+        <button class="btn sm setbtn ${tab === 'set' ? 'pri' : ''}" data-act="tab" data-tab="set"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg>설정</button></div>
       <div class="full">${membersCard()}${classFilterBar()}</div>
     </div>
     <div class="tabs">${tabs.map(([k, a, b]) => `<button class="tab ${tab === k ? 'on' : ''}" data-act="tab" data-tab="${k}">${a}<small>${b}</small></button>`).join('')}</div>
