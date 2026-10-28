@@ -130,6 +130,11 @@
   .rtime{font-weight:900;font-size:17px;min-width:56px;color:var(--pri)}
   .rrowf{display:grid;grid-template-columns:1.3fr 1fr 2fr auto;gap:6px;margin-bottom:6px;align-items:center}
   @media (max-width:560px){.rrowf{grid-template-columns:1fr 1fr;}.rrowf input[data-rf=label]{grid-column:1/2}}
+  .chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:4px 12px;font-size:13px;font-weight:700;color:var(--sub)}
+  .chip.on{background:var(--pri-soft);border-color:var(--pri);color:var(--pri)}
+  .cfbar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:12px 0 0}
+  .mbar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+  .crow{display:grid;grid-template-columns:1fr 110px auto;gap:6px;align-items:center;margin-bottom:6px}
   .legend{font-size:12px;color:var(--sub);margin-top:10px}
   .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1c2333;color:#fff;padding:9px 16px;border-radius:999px;font-size:14px;opacity:0;transition:.2s;pointer-events:none;z-index:99}
   .toast.show{opacity:1}
@@ -251,13 +256,13 @@ function dateRange(ev) {
 let user = null, events = [], cur = null, tab = 'pre', surveys = [], rcount = {};
 let plist = null, pcount = 0, ldraft = null;
 let safeties = [], vmap = {};
-let roll = null, marks = [], unwatch = null;
+let roll = null, marks = [], unwatch = null, unwatchEv = null, cdraft = null;
 const PLACES = { home: '집에서 가족과', class: '교실에서', alone: '혼자서', teacher: '선생님 확인' };
 const PLACE_SHORT = { home: '가정', class: '교실', alone: '혼자', teacher: '확인' };
 
 function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('show'), 1800); }
 function openModal(html, wide) { $('#md').className = 'md' + (wide ? ' wide' : ''); $('#md').innerHTML = '<button class="x noprint" data-act="close">×</button>' + html; $('#ov').classList.add('show'); }
-function closeModal() { $('#ov').classList.remove('show'); $('#md').innerHTML = ''; draft = null; ldraft = null; rdraft = null; }
+function closeModal() { $('#ov').classList.remove('show'); $('#md').innerHTML = ''; draft = null; ldraft = null; rdraft = null; cdraft = null; }
 
 // ---------- 시작 ----------
 if (S.mode === 'demo') $('#mode').hidden = false;
@@ -266,8 +271,9 @@ S.onUser(async u => {
   if (!u) { $('#who').textContent = ''; $('#logout').hidden = true; return renderLogin(); }
   $('#who').textContent = u.displayName || u.email || '';
   $('#logout').hidden = S.mode === 'demo';
+  const joined = await handleJoin();
   await loadEvents();
-  const id = location.hash.match(/^#e=(.+)$/);
+  const id = joined ? [0, joined] : location.hash.match(/^#e=(.+)$/);
   if (id && events.find(e => e.id === id[1])) openEvent(id[1]); else renderHome();
 });
 
@@ -276,7 +282,7 @@ function renderLogin() {
     <img src="logo.png" alt="체험첵! Field-Check!" class="login-logo">
     <p>현장체험학습·수학여행 준비부터 사후 설문까지 한곳에서 챙겨요.</p>
     <button class="btn pri" data-act="login">구글 계정으로 시작하기</button>
-    <div class="hint" style="margin-top:14px">학생은 로그인 없이 QR로만 참여해요.</div></div>`;
+    <div class="hint" style="margin-top:14px">${new URLSearchParams(location.search).get('join') ? '<b style="color:var(--pri)">초대받은 체험학습이 있어요. 로그인하면 바로 함께할 수 있어요.</b>' : '학생은 로그인 없이 QR로만 참여해요.'}</div></div>`;
 }
 
 async function loadEvents() {
@@ -311,21 +317,33 @@ function renderHome() {
 function eventForm(e) {
   const isNew = !e;
   e = e || { title: '', kind: '현장체험학습', date: '', endDate: '', target: '', place: '' };
+  cdraft = isNew ? [{ id: 'c1', name: '1반', total: 25 }] : classesOf(e).map(c => ({ id: c.id, name: c.name, total: c.total }));
   openModal(`<h3>${isNew ? '새 체험학습' : '체험학습 정보 고치기'}</h3>
     <label class="f">이름</label><input class="in" id="f-title" value="${esc(e.title)}" placeholder="예: 6학년 경주 수학여행">
     <div class="two">
       <div><label class="f">종류</label><select class="in" id="f-kind">${KINDS.map(k => `<option ${k === e.kind ? 'selected' : ''}>${k}</option>`).join('')}</select></div>
-      <div><label class="f">대상</label><input class="in" id="f-target" value="${esc(e.target)}" placeholder="예: 5·6학년 24명"></div>
+      <div><label class="f">대상 (보이는 글)</label><input class="in" id="f-target" value="${esc(e.target)}" placeholder="예: 6학년 전체"></div>
     </div>
     <div class="two">
       <div><label class="f">출발일</label><input class="in" type="date" id="f-date" value="${e.date}"></div>
       <div><label class="f">돌아오는 날 (하루면 비워 두기)</label><input class="in" type="date" id="f-end" value="${e.endDate || ''}"></div>
     </div>
     <label class="f">장소</label><input class="in" id="f-place" value="${esc(e.place)}" placeholder="예: 경주 일대">
-    ${isNew ? '<div class="note">만들면 출발일을 기준으로 기본 업무 일정(15개)이 들어가요. 학교 사정에 맞게 고치고 더하면 돼요.</div>' : ''}
-    <div class="mact">${isNew ? '' : '<button class="btn warn" data-act="del-event">이 체험학습 지우기</button>'}<div class="sp"></div>
+    <label class="f">반과 인원</label>
+    <div id="crows"></div>
+    <button class="btn sm" data-act="cf-add">+ 반 더하기</button>
+    <div class="hint">학생은 QR로 들어와 반을 고르고 번호를 눌러요. 반이 하나면 반 고르기 없이 번호만 눌러요.</div>
+    ${isNew ? '<div class="note">만들면 출발일을 기준으로 기본 업무 일정(15개)이 들어가요. 다른 반 선생님은 만든 뒤 "선생님 초대"로 함께할 수 있어요.</div>' : ''}
+    <div class="mact">${!isNew && e.owner === user.uid ? '<button class="btn warn" data-act="del-event">이 체험학습 지우기</button>' : ''}<div class="sp"></div>
       <button class="btn" data-act="close">취소</button><button class="btn pri" data-act="save-event">${isNew ? '만들기' : '저장'}</button></div>`);
+  renderClassRows();
   $('#f-title').focus();
+}
+function renderClassRows() {
+  $('#crows').innerHTML = cdraft.map((c, i) => `<div class="crow">
+    <input class="in" data-ci="${i}" data-cf="name" value="${esc(c.name)}" placeholder="반 이름">
+    <div style="display:flex;align-items:center;gap:4px"><input class="in" type="number" min="1" max="60" data-ci="${i}" data-cf="total" value="${c.total}"><span class="meta">명</span></div>
+    <button class="ib" data-act="cf-del" data-i="${i}">빼기</button></div>`).join('');
 }
 
 async function saveEventForm() {
@@ -335,33 +353,68 @@ async function saveEventForm() {
   if (!date) return toast('출발일을 골라 주세요');
   if (endDate && endDate < date) return toast('돌아오는 날이 출발일보다 빨라요');
   if (endDate === date) endDate = '';
-  const base = { title, date, endDate, kind: $('#f-kind').value, target: $('#f-target').value.trim(), place: $('#f-place').value.trim() };
-  let e;
+  for (const c of cdraft) {
+    c.name = String(c.name).trim(); c.total = Math.round(Number(c.total));
+    if (!c.name) return toast('반 이름을 적어 주세요');
+    if (!(c.total >= 1 && c.total <= 60)) return toast(`${c.name} 인원을 1~60명으로 적어 주세요`);
+  }
+  if (new Set(cdraft.map(c => c.name)).size !== cdraft.length) return toast('반 이름이 겹쳐요');
+  const base = { title, date, endDate, kind: $('#f-kind').value, target: $('#f-target').value.trim(), place: $('#f-place').value.trim(),
+    classes: classMap(cdraft), updatedAt: Date.now() };
   const wasNew = !cur;
-  if (cur) e = { ...cur, ...base, updatedAt: Date.now() };
-  else e = { id: S.newId(), owner: user.uid, ...base, tasks: DEFAULT_TASKS.map(([d, t]) => ({ id: S.newId(), t, d, done: false })), createdAt: Date.now(), updatedAt: Date.now() };
-  await S.saveEvent(e);
-  if (!wasNew) {
-    const l = await S.getList(e.id, 'student');
-    if (l) await S.saveList(e.id, 'student', { ...l, eventTitle: e.title, date: e.date, endDate: e.endDate || '' });
+  let id;
+  if (wasNew) {
+    id = S.newId();
+    await S.saveEvent({ id, owner: user.uid, members: [user.uid], memberNames: { [user.uid]: myName() }, ...base,
+      tasks: DEFAULT_TASKS.map(([d, t]) => ({ id: S.newId(), t, d, done: false })), createdAt: Date.now() });
+  } else {
+    id = cur.id;
+    await S.updateEvent(id, base);
+    Object.assign(cur, base);
+    await syncChildren();
   }
   closeModal();
   await loadEvents();
-  openEvent(e.id);
+  openEvent(id);
   toast(wasNew ? '만들었어요' : '저장했어요');
+}
+const myName = () => (user && (user.displayName || (user.email || '').split('@')[0])) || '선생님';
+
+// 초대 링크로 들어온 경우
+async function handleJoin() {
+  const p = new URLSearchParams(location.search), eid = p.get('join'), code = p.get('code');
+  if (!eid || !code) return null;
+  history.replaceState(null, '', location.pathname);
+  try {
+    await S.joinEvent(eid, code, user.uid, myName());
+    toast('체험학습에 함께하게 되었어요');
+    return eid;
+  } catch (e) {
+    console.error(e);
+    toast('초대 링크가 맞지 않거나 만료되었어요. 새 링크를 받아 주세요');
+    return null;
+  }
 }
 
 // ---------- 체험학습 화면 ----------
 async function openEvent(id, keepTab) {
   cur = events.find(e => e.id === id);
-  if (!keepTab) tab = 'pre';
+  if (!keepTab) { tab = 'pre'; loadFilter(); }
+  // 예전에 만든 체험학습: 함께하는 선생님 명단과 반 구성을 채워 둠
+  if (cur.owner === user.uid && (!cur.members || !cur.members.length)) {
+    cur.members = [user.uid]; cur.memberNames = { ...(cur.memberNames || {}), [user.uid]: myName() };
+    await saveCur('members', 'memberNames');
+  }
+  if (!cur.classes) {
+    cur.classes = classMap(classesOf(cur)); await saveCur('classes'); await syncChildren();
+  }
   history.replaceState(null, '', '#e=' + id);
   if (!keepTab) { plist = null; pcount = 0; }
   renderEvent();
   plist = await S.getList(id, 'student');
   roll = await S.getRoll(id);
   marks = roll ? await S.listMarks(id) : [];
-  if (!keepTab) startWatch();
+  if (!keepTab) startWatch(); else startMarksWatch();
   safeties = await S.listSafety(id);
   safeties.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
   vmap = {};
@@ -382,8 +435,10 @@ function renderEvent() {
     <div class="card evhead">
       <span class="badge">${esc(e.kind)}</span>
       <h2>${esc(e.title)}</h2>
-      <div class="meta">${dateRange(e)}${e.place ? ' · ' + esc(e.place) : ''}${e.target ? ' · ' + esc(e.target) : ''}</div>
+      <div class="meta">${dateRange(e)}${e.place ? ' · ' + esc(e.place) : ''}${e.target ? ' · ' + esc(e.target) : ''} · ${classesOf(e).map(c => `${esc(c.name)} ${c.total}명`).join(', ')}</div>
       <div class="count" style="margin-top:6px">${countdown(e)}</div>
+      ${membersCard()}
+      ${classFilterBar()}
     </div>
     <div class="tabs">${tabs.map(([k, a, b]) => `<button class="tab ${tab === k ? 'on' : ''}" data-act="tab" data-tab="${k}">${a}<small>${b}</small></button>`).join('')}</div>
     <div id="tabc">${tab === 'pre' ? preTab() : tab === 'day' ? dayTab() : postTab()}</div>`;
@@ -501,16 +556,16 @@ async function saveListForm() {
   if (!items.length) return toast('물건을 하나 이상 적어 주세요');
   if (isS) {
     plist = { ...plist, items, updatedAt: Date.now() };
-    await S.saveList(cur.id, 'student', plist);
+    await S.saveList(cur.id, 'student', plist); await touch();
   } else {
-    cur.teacherItems = items; await saveCur();
+    cur.teacherItems = items; await saveCur('teacherItems');
   }
   closeModal(); renderEvent(); toast('저장했어요');
 }
 async function startStudentList() {
   const groups = cur.endDate ? [PACK_STUDENT_DAY[0], ...PACK_STUDENT_NIGHT, ...PACK_STUDENT_DAY.slice(1)] : PACK_STUDENT_DAY;
   plist = { owner: user.uid, eventTitle: cur.title, date: cur.date, endDate: cur.endDate || '', note: '', items: packItems(groups, false), createdAt: Date.now(), updatedAt: Date.now() };
-  await S.saveList(cur.id, 'student', plist);
+  await S.saveList(cur.id, 'student', plist); await touch();
   pcount = 0; renderEvent(); toast('학생 준비물 목록을 만들었어요');
 }
 function packQR() {
@@ -546,7 +601,11 @@ function postTab() {
 }
 
 // ---------- 업무 ----------
-async function saveCur() { cur.updatedAt = Date.now(); await S.saveEvent(cur); }
+async function saveCur(...keys) {
+  cur.updatedAt = Date.now();
+  const f = { updatedAt: cur.updatedAt }; keys.forEach(k => { f[k] = cur[k]; });
+  await S.updateEvent(cur.id, f);
+}
 
 function taskForm(t) {
   const isNew = !t;
@@ -613,7 +672,7 @@ async function saveSurveyForm() {
     open: isNew ? true : !!draft.open, owner: user.uid, eventTitle: cur.title,
     createdAt: draft.createdAt || Date.now(), updatedAt: Date.now(),
   };
-  await S.saveSurvey(cur.id, s);
+  await S.saveSurvey(cur.id, s); await touch();
   closeModal();
   await openEvent(cur.id, true);
   toast(isNew ? '설문을 만들었어요' : '저장했어요');
@@ -694,26 +753,112 @@ async function downloadCsv(sid) {
   a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
+// ---------- 반 구성 ----------
+function guessTotalFrom(target) { const m = String(target || '').match(/(\d+)\s*명/); return m ? Number(m[1]) : 25; }
+function classesOf(e) {
+  if (e && e.classes && Object.keys(e.classes).length)
+    return Object.entries(e.classes).map(([id, c]) => ({ id, ...c })).sort((a, b) => (a.order || 0) - (b.order || 0));
+  return [{ id: 'c1', name: '우리 반', total: guessTotalFrom(e && e.target), order: 0 }];
+}
+const classMap = arr => Object.fromEntries(arr.map((c, i) => [c.id, { name: c.name, total: Number(c.total), order: i }]));
+let clsFilter = 'all';
+const fKey = () => 'fieldcheck-cls-' + (cur ? cur.id : '');
+function loadFilter() { try { clsFilter = localStorage.getItem(fKey()) || 'all'; } catch (e) { clsFilter = 'all'; } if (clsFilter !== 'all' && !classesOf(cur).some(c => c.id === clsFilter)) clsFilter = 'all'; }
+const visClasses = () => classesOf(cur).filter(c => clsFilter === 'all' || c.id === clsFilter);
+const visTotal = () => visClasses().reduce((a, c) => a + Number(c.total), 0);
+const firstCls = () => classesOf(cur)[0].id;
+const cOf = v => v.c || firstCls();   // 반 구분 전 기록은 첫 반으로
+const clsName = id => (classesOf(cur).find(c => c.id === id) || {}).name || '';
+const multiClass = () => classesOf(cur).length > 1;
+function classFilterBar() {
+  if (!multiClass()) return '';
+  const all = classesOf(cur);
+  return `<div class="cfbar"><span class="meta">보기</span>
+    <button class="chip ${clsFilter === 'all' ? 'on' : ''}" data-act="cls-filter" data-id="all">전체</button>
+    ${all.map(c => `<button class="chip ${clsFilter === c.id ? 'on' : ''}" data-act="cls-filter" data-id="${c.id}">${esc(c.name)}</button>`).join('')}</div>`;
+}
+// 반별 번호 격자: marked(c, n) → {label, cls} 또는 null
+function numGrid(act, id, marked) {
+  return visClasses().map(c => {
+    let nums = '';
+    for (let i = 1; i <= c.total; i++) {
+      const m = marked(c.id, i);
+      nums += `<button class="num ${m ? m.cls : ''}" data-act="${act}" data-id="${id}" data-c="${c.id}" data-n="${i}">${i}<small>${m ? m.label : '아직'}</small></button>`;
+    }
+    return `${multiClass() ? `<div class="pg" style="padding:14px 0 0">${esc(c.name)}</div>` : ''}<div class="nums">${nums}</div>`;
+  }).join('');
+}
+function missingText(has) {
+  const parts = visClasses().map(c => {
+    const miss = []; for (let i = 1; i <= c.total; i++) if (!has(c.id, i)) miss.push(i);
+    return { c, miss };
+  });
+  return parts;
+}
+
+// ---------- 함께하는 선생님 ----------
+function membersCard() {
+  const names = cur.memberNames || {};
+  const ids = cur.members && cur.members.length ? cur.members : [cur.owner];
+  const list = ids.map(u => `<span class="chip ${u === user.uid ? 'on' : ''}" style="cursor:default">${esc(names[u] || (u === cur.owner ? '만든 선생님' : '선생님'))}${u === cur.owner ? ' · 만든 사람' : ''}</span>`).join(' ');
+  return `<div class="mbar"><span class="meta">함께하는 선생님</span> ${list}
+    <button class="btn sm" data-act="team">선생님 초대·관리</button></div>`;
+}
+function inviteUrl() {
+  const u = new URL('index.html', location.href);
+  u.hash = ''; u.search = `?join=${encodeURIComponent(cur.id)}&code=${encodeURIComponent(cur.inviteCode)}`;
+  return u.toString();
+}
+const newCode = () => Array.from(crypto.getRandomValues(new Uint8Array(8)), b => 'abcdefghjkmnpqrstuvwxyz23456789'[b % 31]).join('');
+async function teamModal() {
+  if (!cur.inviteCode) { cur.inviteCode = newCode(); await saveCur('inviteCode'); }
+  const isOwner = cur.owner === user.uid, names = cur.memberNames || {};
+  const ids = cur.members && cur.members.length ? cur.members : [cur.owner];
+  const rows = ids.map(u => `<div class="task" style="padding:10px 4px"><div class="tx"><div class="tt">${esc(names[u] || '선생님')}${u === user.uid ? ' (나)' : ''}</div>
+      <div class="tm">${u === cur.owner ? '만든 사람' : '함께하는 선생님'}</div></div>
+      ${isOwner && u !== cur.owner ? `<button class="ib" data-act="team-remove" data-id="${u}">내보내기</button>` : ''}
+      ${!isOwner && u === user.uid ? `<button class="ib" data-act="team-leave">나가기</button>` : ''}</div>`).join('');
+  openModal(`<h3>함께하는 선생님</h3>
+    <div class="meta">이 체험학습에만 함께할 수 있어요. 다른 체험학습은 보이지 않아요.</div>
+    <div class="card" style="margin-top:12px;padding:6px 12px">${rows}</div>
+    <label class="f">초대 링크</label>
+    <div class="url" style="background:#f6f7fa;border-radius:10px;padding:10px;margin:0">${esc(inviteUrl())}</div>
+    <div class="hint">링크를 메신저로 보내 주세요. 받은 선생님이 링크를 열고 구글로 로그인하면 바로 함께 쓸 수 있어요. 모두 같은 권한으로 함께 고치고 체크해요.</div>
+    <div class="mact">${isOwner ? '<button class="btn" data-act="team-newcode">초대 링크 새로 만들기</button>' : ''}<div class="sp"></div>
+      <button class="btn pri" data-act="copy" data-url="${esc(inviteUrl())}">초대 링크 복사</button></div>`);
+}
+
 // ---------- 안전 교육 ----------
+function classPlan(s) {
+  if (!s.classDate) return '';
+  const p = s.classPeriod ? (s.classPeriod === '방과후' ? ' 방과 후' : ` ${s.classPeriod}교시`) : '';
+  return `${fmt(parseD(s.classDate))}${p} 교실에서 함께 시청`;
+}
+const planOf = s => [classPlan(s), s.memo].filter(Boolean).join(' · ');
 function viewStats(s) {
-  const vs = vmap[s.id] || [], by = {};
-  vs.forEach(v => { by[v.place] = (by[v.place] || 0) + 1; });
-  const doneSet = new Set(vs.map(v => Number(v.n)));
-  const missing = [];
-  for (let i = 1; i <= s.total; i++) if (!doneSet.has(i)) missing.push(i);
-  return { n: doneSet.size, by, missing };
+  const vs = vmap[s.id] || [], by = {}, set = new Set();
+  const vis = new Set(visClasses().map(c => c.id));
+  vs.forEach(v => { const c = cOf(v); if (!vis.has(c)) return; set.add(c + '_' + Number(v.n)); by[v.place] = (by[v.place] || 0) + 1; });
+  const parts = missingText((c, n) => set.has(c + '_' + n));
+  return { n: set.size, by, parts, total: visTotal() };
+}
+function missLine(parts) {
+  const has = parts.filter(p => p.miss.length);
+  if (!has.length) return '';
+  return has.map(p => `${multiClass() ? p.c.name + ' ' : ''}${p.miss.join(', ')}`).join(' / ');
 }
 function safetySection() {
   const cards = safeties.map(s => {
-    const st = viewStats(s), pct = s.total ? Math.round(st.n / s.total * 100) : 0;
+    const st = viewStats(s), pct = st.total ? Math.round(st.n / st.total * 100) : 0;
     const parts = Object.keys(PLACES).filter(k => st.by[k]).map(k => `${PLACE_SHORT[k]} ${st.by[k]}`).join(' · ');
+    const miss = missLine(st.parts), missCount = st.total - st.n;
     return `<div class="card svc">
       <div><span class="badge ${s.open ? 'ok' : 'gray'}">${s.open ? '받는 중' : '마감'}</span>
-        <span class="badge">${st.n}/${s.total}명 시청</span>
+        <span class="badge">${st.n}/${st.total}명 시청</span>
         <h3 style="margin:8px 0 2px;font-size:16px">${esc(s.title)}</h3>
         <div class="meta">영상 ${s.videos.length}개${parts ? ' · ' + parts : ''}${planOf(s) ? ' · ' + esc(planOf(s)) : ''}</div>
         <div class="bar"><i style="width:${pct}%"></i></div>
-        ${st.missing.length && st.missing.length <= 12 ? `<div class="meta" style="margin-top:4px">아직 안 본 번호: ${st.missing.join(', ')}</div>` : ''}</div>
+        ${miss && missCount <= 15 ? `<div class="meta" style="margin-top:4px">아직 안 본 번호: ${esc(miss)}</div>` : ''}</div>
       <div class="acts">
         <button class="btn sm pri" data-act="sf-qr" data-id="${s.id}">QR·인쇄</button>
         <button class="btn sm" data-act="sf-board" data-id="${s.id}">번호 현황</button>
@@ -726,19 +871,13 @@ function safetySection() {
   return `<div class="sec">
     <div class="rowb"><h3 style="margin:0;font-size:16px">안전 교육</h3><button class="btn pri sm" data-act="sf-new">+ 안전 교육</button></div>
     ${cards ? `<div class="grid" style="grid-template-columns:1fr">${cards}</div>`
-      : `<div class="card empty" style="padding:28px 20px"><b>아직 안전 교육이 없어요</b>영상 주소를 올려 두면 학생이 QR로 들어와 보고, 자기 번호를 눌러 시청을 체크해요.<br>가정에서 부모님과 함께 보거나 교실에서 함께 본 기록이 그대로 남아요.</div>`}
+      : `<div class="card empty" style="padding:28px 20px"><b>아직 안전 교육이 없어요</b>영상 주소를 올려 두면 학생이 QR로 들어와 보고, ${multiClass() ? '반과 ' : ''}번호를 눌러 시청을 체크해요.<br>가정에서 부모님과 함께 보거나 교실에서 함께 본 기록이 그대로 남아요.</div>`}
   </div>`;
 }
-function classPlan(s) {
-  if (!s.classDate) return '';
-  const p = s.classPeriod ? (s.classPeriod === '방과후' ? ' 방과 후' : ` ${s.classPeriod}교시`) : '';
-  return `${fmt(parseD(s.classDate))}${p} 교실에서 함께 시청`;
-}
-const planOf = s => [classPlan(s), s.memo].filter(Boolean).join(' · ');
-function guessTotal() { const m = String(cur.target || '').match(/(\d+)\s*명/); return m ? Number(m[1]) : 25; }
 function safetyForm(s) {
   const isNew = !s;
-  s = s || { title: '체험학습 안전 교육', videos: [], total: guessTotal(), memo: '', classDate: '', classPeriod: '' };
+  s = s || { title: '체험학습 안전 교육', videos: [], memo: '', classDate: '', classPeriod: '' };
+  const cls = classesOf(cur);
   openModal(`<h3>${isNew ? '새 안전 교육' : '안전 교육 고치기'}</h3>
     <label class="f">제목</label><input class="in" id="sf-title" value="${esc(s.title)}" placeholder="예: 버스 안전·숙소 화재 대피">
     <label class="f">영상 주소 (한 줄에 하나씩)</label>
@@ -746,68 +885,62 @@ function safetyForm(s) {
     <div class="hint">유튜브 주소는 학생 화면에서 바로 재생돼요. 다른 주소는 "영상 보러 가기" 버튼으로 열려요.</div>
     <label class="hint" style="display:flex;gap:8px;align-items:center;margin-top:8px;font-size:14px;color:var(--ink)"><input type="checkbox" id="sf-req" ${s.requireWatch === false ? '' : 'checked'} style="width:18px;height:18px"> 영상을 90% 넘게 봐야 번호를 체크할 수 있게 하기</label>
     <div class="hint" style="margin-top:2px">유튜브 영상은 실제로 재생된 시간만 세요. 앞으로 건너뛴 부분은 들어가지 않아요. 유튜브가 아닌 영상은 시간을 셀 수 없어서 "끝까지 봤어요"에 체크하게 돼요.</div>
-    <div class="two">
-      <div><label class="f">학생 수 (번호 1번부터)</label><input class="in" type="number" min="1" max="200" id="sf-total" value="${s.total}"></div>
-      <div></div>
-    </div>
+    <div class="note">대상: ${cls.map(c => `${esc(c.name)} ${c.total}명`).join(', ')} · 반과 인원은 체험학습 '정보 고치기'에서 바꿔요.</div>
     <label class="f">교실 시청 계획 (안 하면 비워 두기)</label>
     <div class="two">
       <div><input class="in" type="date" id="sf-cdate" value="${s.classDate || ''}" aria-label="교실 시청 날짜"></div>
       <div><select class="in" id="sf-cperiod" aria-label="교시"><option value="">교시 선택</option>${[1, 2, 3, 4, 5, 6, 7].map(n => `<option value="${n}" ${String(s.classPeriod) === String(n) ? 'selected' : ''}>${n}교시</option>`).join('')}<option value="방과후" ${s.classPeriod === '방과후' ? 'selected' : ''}>방과 후</option></select></div>
     </div>
     <label class="f">메모</label><input class="in" id="sf-memo" value="${esc(s.memo)}" placeholder="예: 못 본 학생은 아침 활동 시간에 다시 시청">
-    <div class="note">학생은 이름 대신 번호만 눌러요. 교실에서 함께 본 학생은 '번호 현황'에서 선생님이 직접 체크할 수 있어요.</div>
     <div class="mact"><div class="sp"></div><button class="btn" data-act="close">취소</button><button class="btn pri" data-act="sf-save" data-id="${s.id || ''}">${isNew ? '만들기' : '저장'}</button></div>`);
   $('#sf-title').focus();
 }
 async function saveSafetyForm(id) {
   const title = $('#sf-title').value.trim();
   const videos = [...new Set($('#sf-videos').value.split('\n').map(x => x.trim()).filter(Boolean))];
-  const total = Math.round(Number($('#sf-total').value));
   if (!title) return toast('제목을 적어 주세요');
   if (!videos.length) return toast('영상 주소를 하나 이상 넣어 주세요');
   if (videos.some(v => !/^https?:\/\//.test(v))) return toast('영상 주소는 https:// 로 시작해야 해요');
-  if (!(total >= 1 && total <= 200)) return toast('학생 수를 1~200 사이로 적어 주세요');
   if ($('#sf-cperiod').value && !$('#sf-cdate').value) return toast('교실 시청 날짜를 골라 주세요');
   const old = id ? safeties.find(x => x.id === id) : null;
-  if (old && total < old.total && (vmap[id] || []).some(v => Number(v.n) > total) && !confirm('줄인 학생 수보다 큰 번호의 체크가 있어요. 그래도 저장할까요?')) return;
-  const s = { id: id || S.newId(), title, videos, total, memo: $('#sf-memo').value.trim(), classDate: $('#sf-cdate').value, classPeriod: $('#sf-cperiod').value, requireWatch: $('#sf-req').checked, open: old ? !!old.open : true,
-    owner: user.uid, eventTitle: cur.title, createdAt: old ? old.createdAt : Date.now(), updatedAt: Date.now() };
+  const s = { id: id || S.newId(), title, videos, classes: classMap(classesOf(cur)),
+    memo: $('#sf-memo').value.trim(), classDate: $('#sf-cdate').value, classPeriod: $('#sf-cperiod').value, requireWatch: $('#sf-req').checked,
+    open: old ? !!old.open : true, owner: old ? old.owner : user.uid, eventTitle: cur.title,
+    createdAt: old ? old.createdAt : Date.now(), updatedAt: Date.now() };
   s.planText = classPlan(s);
-  await S.saveSafety(cur.id, s);
+  await S.saveSafety(cur.id, s); await touch();
   closeModal(); await openEvent(cur.id, true); toast(old ? '저장했어요' : '안전 교육을 만들었어요');
 }
 function safetyQR(id) {
   const s = safeties.find(x => x.id === id);
   const u = new URL('safety.html', location.href);
   u.hash = ''; u.search = `?e=${encodeURIComponent(cur.id)}&s=${encodeURIComponent(id)}`;
-  qrModal({ url: u.toString(), title: s.title, sub: `${cur.title} · 영상을 보고 자기 번호를 눌러 주세요`,
+  qrModal({ url: u.toString(), title: s.title, sub: `${cur.title} · 영상을 보고 ${multiClass() ? '반과 ' : ''}번호를 눌러 주세요`,
     note: s.open ? '' : '지금은 마감 상태라 학생이 체크할 수 없어요.',
-    extra: `<div class="pl" style="display:block"><b>가정 안내</b><ul><li>휴대폰 카메라로 QR을 찍으면 안전 교육 영상이 열려요.</li><li>영상은 부모님과 함께 끝까지 봐 주세요.</li><li>다 보면 '어디서 봤는지'를 고르고 자기 번호를 눌러요.</li>${classPlan(s) ? `<li>${esc(classPlan(s))}: 집에서 못 본 학생도 이때 함께 봐요.</li>` : ''}${s.memo ? `<li>${esc(s.memo)}</li>` : ''}</ul></div>` });
+    extra: `<div class="pl" style="display:block"><b>가정 안내</b><ul><li>휴대폰 카메라로 QR을 찍으면 안전 교육 영상이 열려요.</li><li>영상은 부모님과 함께 끝까지 봐 주세요.</li><li>다 보면 '어디서 봤는지'를 고르고 ${multiClass() ? '반과 ' : ''}번호를 눌러요.</li>${classPlan(s) ? `<li>${esc(classPlan(s))}: 집에서 못 본 학생도 이때 함께 봐요.</li>` : ''}${s.memo ? `<li>${esc(s.memo)}</li>` : ''}</ul></div>` });
 }
 function safetyBoard(id) {
   const s = safeties.find(x => x.id === id);
-  const vs = {}; (vmap[id] || []).forEach(v => { vs[Number(v.n)] = v; });
-  const st = viewStats(s);
-  let nums = '';
-  for (let i = 1; i <= s.total; i++) {
-    const v = vs[i];
-    nums += `<button class="num ${v ? 'on' : ''}" data-act="sf-num" data-id="${id}" data-n="${i}">${i}<small>${v ? PLACE_SHORT[v.place] || '완료' : '아직'}</small></button>`;
-  }
-  openModal(`<h3>${esc(s.title)} 번호 현황</h3>
-    <div><span class="badge">${st.n}/${s.total}명 시청</span> ${Object.keys(PLACES).filter(k => st.by[k]).map(k => `<span class="badge gray">${PLACES[k]} ${st.by[k]}</span>`).join(' ')}</div>
-    <div class="nums">${nums}</div>
-    <div class="legend">'아직'인 번호를 누르면 선생님 확인으로 체크돼요 (교실에서 함께 본 학생). 체크된 번호를 누르면 취소할 수 있어요.</div>
+  const vs = {}; (vmap[id] || []).forEach(v => { vs[cOf(v) + '_' + Number(v.n)] = v; });
+  const st = viewStats(s), miss = missLine(st.parts);
+  const html = `<div id="sfboard" data-id="${id}"><h3>${esc(s.title)} 번호 현황</h3>
+    <div><span class="badge">${st.n}/${st.total}명 시청</span> ${Object.keys(PLACES).filter(k => st.by[k]).map(k => `<span class="badge gray">${PLACES[k]} ${st.by[k]}</span>`).join(' ')}</div>
+    ${classFilterBar()}
+    ${miss ? `<div class="meta" style="margin-top:8px">아직 안 본 번호: <b style="color:var(--warn)">${esc(miss)}</b></div>` : '<div class="meta" style="margin-top:8px;color:var(--ok);font-weight:700">모두 시청했어요</div>'}
+    ${numGrid('sf-num', id, (c, n) => { const v = vs[c + '_' + n]; return v ? { cls: v.place === 'teacher' ? 'tch' : 'on', label: PLACE_SHORT[v.place] || '완료' } : null; })}
+    <div class="legend">'아직'인 번호를 누르면 선생님 확인으로 체크돼요 (교실에서 함께 본 학생). 체크된 번호를 누르면 취소할 수 있어요.</div></div>
     <div class="mact"><button class="btn" data-act="sf-board-refresh" data-id="${id}">새로고침</button><div class="sp"></div>
-      <button class="btn pri" data-act="sf-copy" data-id="${id}">기록 복사</button></div>`, true);
+      <button class="btn pri" data-act="sf-copy" data-id="${id}">기록 복사</button></div>`;
+  openModal(html, true);
 }
-async function toggleNum(id, n) {
-  const has = (vmap[id] || []).some(v => Number(v.n) === n);
-  if (has) {
-    if (!confirm(`${n}번 체크를 취소할까요?`)) return;
-    await S.removeView(cur.id, id, n);
+async function toggleNum(id, c, n) {
+  const v = (vmap[id] || []).find(v => cOf(v) === c && Number(v.n) === n);
+  const label = `${multiClass() ? clsName(c) + ' ' : ''}${n}번`;
+  if (v) {
+    if (!confirm(`${label} 체크를 취소할까요?`)) return;
+    if (v.c) await S.removeView(cur.id, id, c, n); else await S.removeViewLegacy(cur.id, id, v.id);
   } else {
-    try { await S.addView(cur.id, id, n, 'teacher', user.uid); }
+    try { await S.addView(cur.id, id, c, n, 'teacher', user.uid); }
     catch (e) { if (!String(e.message).includes('already')) throw e; }
   }
   vmap[id] = await S.listViews(cur.id, id);
@@ -815,23 +948,27 @@ async function toggleNum(id, n) {
 }
 async function copySafetyRecord(id) {
   vmap[id] = await S.listViews(cur.id, id);
-  const s = safeties.find(x => x.id === id), st = viewStats(s);
+  const s = safeties.find(x => x.id === id);
+  const saveF = clsFilter; clsFilter = 'all';
+  const st = viewStats(s);
+  clsFilter = saveF;
   const t = today();
   const lines = [
     '[안전 교육 실시 기록]',
     `체험학습: ${cur.title} (${dateRange(cur)})`,
+    `대상: ${classesOf(cur).map(c => `${c.name} ${c.total}명`).join(', ')}`,
     `교육 내용: ${s.title}`,
     `교육 방법: 영상 시청 (가정에서 보호자와 함께 시청 안내${classPlan(s) ? ', ' + classPlan(s) : ''})`,
     ...(s.requireWatch === false ? [] : ['시청 확인: 유튜브 영상은 실제 재생 시간 90% 이상일 때만 체크 가능']),
     ...(s.memo ? [`메모: ${s.memo}`] : []),
     ...s.videos.map((v, i) => `영상 ${i + 1}: ${v}`),
-    `시청 학생: ${st.n}명 / ${s.total}명` + (st.n ? ` (${Object.keys(PLACES).filter(k => st.by[k]).map(k => `${PLACES[k]} ${st.by[k]}명`).join(', ')})` : ''),
-    `아직 안 본 번호: ${st.missing.length ? st.missing.join(', ') : '없음'}`,
+    `시청 학생: ${st.n}명 / ${st.total}명` + (st.n ? ` (${Object.keys(PLACES).filter(k => st.by[k]).map(k => `${PLACES[k]} ${st.by[k]}명`).join(', ')})` : ''),
+    ...st.parts.map(p => `${multiClass() ? p.c.name + ' ' : ''}아직 안 본 번호: ${p.miss.length ? p.miss.join(', ') : '없음'}`),
     `기록한 날: ${t.getFullYear()}. ${t.getMonth() + 1}. ${t.getDate()}.`,
   ];
   const text = lines.join('\n');
   try { await navigator.clipboard.writeText(text); toast('실시 기록을 복사했어요. 보고서에 붙여 넣으면 돼요'); }
-  catch (e) { openModal(`<h3>실시 기록</h3><textarea class="in" rows="10">${esc(text)}</textarea><div class="hint">복사가 막혀 있어 글을 보여 드려요. 직접 복사해 주세요.</div>`); }
+  catch (e) { openModal(`<h3>실시 기록</h3><textarea class="in" rows="12">${esc(text)}</textarea><div class="hint">복사가 막혀 있어 글을 보여 드려요. 직접 복사해 주세요.</div>`); }
   renderEvent();
 }
 
@@ -861,45 +998,63 @@ function slotTimes(sl, before, after) {
   d.setHours(h, m, 0, 0);
   return { ...sl, openAt: d.getTime() - before * 60000, closeAt: d.getTime() + after * 60000 };
 }
-function buildRoll(slots, total, before, after) {
+function buildRoll(slots, before, after) {
   const map = {};
   slots.forEach(sl => { map[sl.id] = slotTimes(sl, before, after); });
-  return { owner: user.uid, eventTitle: cur.title, total, before, after, slots: map,
+  return { owner: roll ? roll.owner : user.uid, eventTitle: cur.title, classes: classMap(classesOf(cur)), before, after, slots: map,
     createdAt: roll ? roll.createdAt : Date.now(), updatedAt: Date.now() };
 }
 const sortedSlots = () => roll ? Object.values(roll.slots).sort((a, b) => a.openAt - b.openAt) : [];
 const slotStatus = sl => { const now = Date.now(); return now < sl.openAt ? 'soon' : now > sl.closeAt ? 'past' : 'open'; };
-const slotMarks = id => marks.filter(m => m.slot === id);
+function slotSet(id) {
+  const vis = new Set(visClasses().map(c => c.id)), set = new Map();
+  marks.forEach(m => { if (m.slot !== id) return; const c = cOf(m); if (vis.has(c)) set.set(c + '_' + Number(m.n), m); });
+  return set;
+}
 const slotName = sl => `${fmt(parseD(sl.date))} ${sl.time} ${sl.label}`;
 
 function startWatch() {
   stopWatch();
-  if (!roll) return;
+  const id = cur.id;
+  unwatchEv = S.watchEvent(id, e => {
+    if (!cur || cur.id !== id || !e) return;
+    const changed = (e.touchedAt || 0) !== (cur.touchedAt || 0);
+    const i = events.findIndex(x => x.id === id); if (i >= 0) events[i] = e;
+    cur = e;
+    if (changed) openEvent(id, true);          // 다른 선생님이 설문·안전 교육·점검 등을 바꿈
+    else if (!$('#ov').classList.contains('show')) renderEvent();
+  }, e => console.error(e));
+  startMarksWatch();
+}
+// 함께하는 선생님들에게 "바뀌었어요"를 알림
+async function touch() { cur.touchedAt = Date.now(); await saveCur('touchedAt'); }
+function startMarksWatch() {
+  if (!roll || unwatch) return;
   const id = cur.id;
   unwatch = S.watchMarks(id, m => {
     if (!cur || cur.id !== id) return;
     marks = m;
     if ($('#rollboard')) rollBoard($('#rollboard').dataset.slot);
-    if (tab === 'day') renderEvent();
+    if (tab === 'day' && !$('#ov').classList.contains('show')) renderEvent();
   }, e => console.error(e));
 }
-function stopWatch() { if (unwatch) { unwatch(); unwatch = null; } }
+function stopWatch() { if (unwatch) { unwatch(); unwatch = null; } if (unwatchEv) { unwatchEv(); unwatchEv = null; } }
 
 function dayTab() {
   const soon = `<div class="sec"><h3>곧 들어올 기능</h3><div class="soon">
     <div class="card"><b>조별 활동지</b><span>모둠 QR로 현장 미션 해결·사진 올리기</span></div></div></div>`;
   if (!roll) return `<div class="sec"><h3>인원 점검</h3><div class="card svc">
-      <div><div class="meta">버스 탑승, 점심 후, 숙소 점호처럼 정해진 시간마다 인원을 확인해요. 학생은 QR로 들어와 자기 번호를 누르고, 남은 번호는 선생님이 직접 확인해요.${cur.endDate ? ' 날짜마다 기본 점검 시간이 들어가요.' : ''}</div></div>
+      <div><div class="meta">버스 탑승, 점심 후, 숙소 점호처럼 정해진 시간마다 인원을 확인해요. 학생은 QR로 들어와 ${multiClass() ? '반과 ' : ''}번호를 누르고, 남은 번호는 선생님이 직접 확인해요.${cur.endDate ? ' 날짜마다 기본 점검 시간이 들어가요.' : ''}</div></div>
       <div class="acts"><button class="btn sm pri" data-act="roll-start">기본 점검 시간으로 시작하기</button></div></div></div>${soon}`;
-  const days = {};
+  const days = {}, total = visTotal();
   sortedSlots().forEach(sl => { (days[sl.date] = days[sl.date] || []).push(sl); });
-  const dayKeys = Object.keys(days).sort(), all = tripDays();
-  const blocks = dayKeys.map(d => {
+  const all = tripDays();
+  const blocks = Object.keys(days).sort().map(d => {
     const idx = all.indexOf(d);
     const rows = days[d].map(sl => {
-      const st = slotStatus(sl), n = new Set(slotMarks(sl.id).map(m => Number(m.n))).size, left = roll.total - n;
+      const st = slotStatus(sl), n = slotSet(sl.id).size, left = total - n;
       const badge = st === 'open' ? '<span class="badge ok">지금 점검 중</span>' : st === 'soon' ? '<span class="badge gray">예정</span>' : '<span class="badge gray">지남</span>';
-      const cnt = st === 'soon' && !n ? '' : `<span class="badge ${left > 0 ? (st === 'soon' ? '' : 'warn') : 'ok'}">${n}/${roll.total}${left > 0 && st !== 'soon' ? ` · ${left}명 남음` : left <= 0 ? ' · 모두 확인' : ''}</span>`;
+      const cnt = st === 'soon' && !n ? '' : `<span class="badge ${left > 0 ? (st === 'soon' ? '' : 'warn') : 'ok'}">${n}/${total}${left > 0 && st !== 'soon' ? ` · ${left}명 남음` : left <= 0 ? ' · 모두 확인' : ''}</span>`;
       return `<div class="task rollrow ${st === 'open' ? 'now' : ''}" data-act="roll-board" data-id="${sl.id}">
         <div class="rtime">${esc(sl.time)}</div>
         <div class="tx"><div class="tt">${esc(sl.label)}</div><div class="tm">${badge} ${cnt}</div></div>
@@ -910,49 +1065,44 @@ function dayTab() {
   return `<div class="sec">
     <div class="rowb"><h3 style="margin:0;font-size:16px">인원 점검</h3>
       <div class="acts" style="display:flex;gap:6px"><button class="btn sm pri" data-act="roll-qr">QR·인쇄</button><button class="btn sm" data-act="roll-edit">점검 시간 고치기</button></div></div>
-    <div class="meta" style="margin-bottom:8px">학생 ${roll.total}명 · 점검 시간 ${roll.before}분 전부터 ${roll.after}분 뒤까지 학생이 체크할 수 있어요. 번호표는 실시간으로 채워져요.</div>
+    <div class="meta" style="margin-bottom:8px">${clsFilter === 'all' ? '전체' : esc(clsName(clsFilter))} ${total}명 · 점검 시간 ${roll.before}분 전부터 ${roll.after}분 뒤까지 학생이 체크할 수 있어요. 번호표는 실시간으로 채워져요.</div>
     <div class="card" style="padding:4px 4px 6px">${blocks || '<div class="empty">점검 시간이 없어요</div>'}</div>
   </div>${soon}`;
 }
-
 async function startRoll() {
-  roll = buildRoll(defaultSlots(), guessTotal(), 10, 30);
+  roll = buildRoll(defaultSlots(), 10, 30);
   await S.saveRoll(cur.id, roll);
-  marks = []; startWatch(); renderEvent(); toast('기본 점검 시간을 만들었어요');
+  marks = []; startMarksWatch(); await touch(); renderEvent(); toast('기본 점검 시간을 만들었어요');
 }
-
 function rollBoard(slotId) {
   const sl = roll.slots[slotId];
   if (!sl) return closeModal();
-  const ms = {}; slotMarks(slotId).forEach(m => { ms[Number(m.n)] = m; });
-  const n = Object.keys(ms).length, st = slotStatus(sl);
-  const bySt = slotMarks(slotId).filter(m => m.src === 'student').length;
-  let nums = '';
-  for (let i = 1; i <= roll.total; i++) {
-    const m = ms[i];
-    nums += `<button class="num ${m ? (m.src === 'teacher' ? 'tch' : 'on') : ''}" data-act="roll-num" data-id="${slotId}" data-n="${i}">${i}<small>${m ? (m.src === 'teacher' ? '확인' : '본인') : '아직'}</small></button>`;
-  }
-  const missing = []; for (let i = 1; i <= roll.total; i++) if (!ms[i]) missing.push(i);
+  const set = slotSet(slotId), st = slotStatus(sl), total = visTotal();
+  const bySt = [...set.values()].filter(m => m.src === 'student').length;
+  const miss = missLine(missingText((c, n) => set.has(c + '_' + n)));
   const html = `<div id="rollboard" data-slot="${slotId}"><h3>${esc(slotName(sl))}</h3>
     <div><span class="badge ${st === 'open' ? 'ok' : 'gray'}">${st === 'open' ? '지금 점검 중' : st === 'soon' ? '예정' : '지남'}</span>
-      <span class="badge ${missing.length ? 'warn' : 'ok'}">${n}/${roll.total}명 확인</span>
-      <span class="badge gray">학생 체크 ${bySt} · 선생님 확인 ${n - bySt}</span></div>
-    ${missing.length ? `<div class="meta" style="margin-top:8px">남은 번호: <b style="color:var(--warn)">${missing.join(', ')}</b></div>` : '<div class="meta" style="margin-top:8px;color:var(--ok);font-weight:700">모두 확인했어요</div>'}
-    <div class="nums">${nums}</div>
+      <span class="badge ${set.size < total ? 'warn' : 'ok'}">${set.size}/${total}명 확인</span>
+      <span class="badge gray">학생 체크 ${bySt} · 선생님 확인 ${set.size - bySt}</span></div>
+    ${classFilterBar()}
+    ${miss ? `<div class="meta" style="margin-top:8px">남은 번호: <b style="color:var(--warn)">${esc(miss)}</b></div>` : '<div class="meta" style="margin-top:8px;color:var(--ok);font-weight:700">모두 확인했어요</div>'}
+    ${numGrid('roll-num', slotId, (c, n) => { const m = set.get(c + '_' + n); return m ? { cls: m.src === 'teacher' ? 'tch' : 'on', label: m.src === 'teacher' ? '확인' : '본인' } : null; })}
     <div class="legend">'아직'인 번호를 누르면 선생님 확인으로 체크돼요. 체크된 번호를 누르면 취소할 수 있어요. 학생이 체크하면 바로 채워져요.</div></div>`;
-  if ($('#rollboard')) { $('#md').innerHTML = '<button class="x noprint" data-act="close">×</button>' + html; }
+  if ($('#rollboard')) { const y = $('#ov').scrollTop; $('#md').innerHTML = '<button class="x noprint" data-act="close">×</button>' + html; $('#ov').scrollTop = y; }
   else openModal(html, true);
 }
-async function toggleRollNum(slotId, n) {
-  const has = slotMarks(slotId).some(m => Number(m.n) === n);
-  if (has) { if (!confirm(`${n}번 확인을 취소할까요?`)) return; await S.removeMark(cur.id, slotId, n); }
-  else { try { await S.addMark(cur.id, slotId, n, 'teacher', user.uid); } catch (e) { if (!String(e.message).includes('already')) throw e; } }
+async function toggleRollNum(slotId, c, n) {
+  const m = marks.find(m => m.slot === slotId && cOf(m) === c && Number(m.n) === n);
+  const label = `${multiClass() ? clsName(c) + ' ' : ''}${n}번`;
+  if (m) {
+    if (!confirm(`${label} 확인을 취소할까요?`)) return;
+    if (m.c) await S.removeMark(cur.id, slotId, c, n); else await S.removeMarkLegacy(cur.id, m.id);
+  } else { try { await S.addMark(cur.id, slotId, c, n, 'teacher', user.uid); } catch (e) { if (!String(e.message).includes('already')) throw e; } }
   marks = await S.listMarks(cur.id); rollBoard(slotId); renderEvent();
 }
-
 let rdraft = null;
 function rollForm() {
-  rdraft = { total: roll.total, before: roll.before, after: roll.after, slots: sortedSlots().map(s => ({ id: s.id, date: s.date, time: s.time, label: s.label })) };
+  rdraft = { before: roll.before, after: roll.after, slots: sortedSlots().map(s => ({ id: s.id, date: s.date, time: s.time, label: s.label })) };
   renderRollForm();
 }
 function renderRollForm() {
@@ -965,20 +1115,17 @@ function renderRollForm() {
       <button class="ib" data-act="rs-del" data-i="${i}">빼기</button></div>`;
   }).join('');
   openModal(`<h3>점검 시간 고치기</h3>
-    <div class="two">
-      <div><label class="f">학생 수 (번호 1번부터)</label><input class="in" type="number" min="1" max="200" id="rl-total" value="${rdraft.total}"></div>
-      <div><label class="f">학생이 체크할 수 있는 때</label><div style="display:flex;gap:6px;align-items:center">
-        <input class="in" type="number" min="0" max="120" id="rl-before" value="${rdraft.before}" style="width:70px"><span class="meta">분 전부터</span>
-        <input class="in" type="number" min="5" max="240" id="rl-after" value="${rdraft.after}" style="width:70px"><span class="meta">분 뒤까지</span></div></div>
-    </div>
+    <label class="f">학생이 체크할 수 있는 때</label><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+      <input class="in" type="number" min="0" max="120" id="rl-before" value="${rdraft.before}" style="width:80px"><span class="meta">분 전부터</span>
+      <input class="in" type="number" min="5" max="240" id="rl-after" value="${rdraft.after}" style="width:80px"><span class="meta">분 뒤까지</span></div>
     <label class="f">점검 시간</label>${rows}
     <button class="btn sm" data-act="rs-add">+ 점검 시간 더하기</button>
+    <div class="note">대상: ${classesOf(cur).map(c => `${esc(c.name)} ${c.total}명`).join(', ')} · 반과 인원은 체험학습 '정보 고치기'에서 바꿔요.</div>
     <div class="hint" style="margin-top:8px">이미 체크된 기록은 점검 시간을 고쳐도 그대로 남아요. 점검을 빼면 그 점검의 기록은 목록에서 보이지 않아요.</div>
     <div class="mact"><div class="sp"></div><button class="btn" data-act="close">취소</button><button class="btn pri" data-act="rs-save">저장</button></div>`, true);
 }
 async function saveRollForm() {
-  const total = Math.round(Number($('#rl-total').value)), before = Math.round(Number($('#rl-before').value)), after = Math.round(Number($('#rl-after').value));
-  if (!(total >= 1 && total <= 200)) return toast('학생 수를 1~200 사이로 적어 주세요');
+  const before = Math.round(Number($('#rl-before').value)), after = Math.round(Number($('#rl-after').value));
   if (!(before >= 0 && before <= 120) || !(after >= 5 && after <= 240)) return toast('체크할 수 있는 때를 다시 확인해 주세요');
   if (!rdraft.slots.length) return toast('점검 시간을 하나 이상 넣어 주세요');
   for (const [i, s] of rdraft.slots.entries()) {
@@ -986,9 +1133,9 @@ async function saveRollForm() {
     if (!s.time) return toast(`${i + 1}번째 점검 시간을 적어 주세요`);
     if (!s.label) return toast(`${i + 1}번째 점검 이름을 적어 주세요`);
   }
-  roll = buildRoll(rdraft.slots, total, before, after);
+  roll = buildRoll(rdraft.slots, before, after);
   await S.saveRoll(cur.id, roll);
-  rdraft = null; closeModal(); renderEvent(); toast('저장했어요');
+  rdraft = null; closeModal(); await touch(); renderEvent(); toast('저장했어요');
 }
 function rollQR() {
   const u = new URL('rollcall.html', location.href);
@@ -997,8 +1144,19 @@ function rollQR() {
   sortedSlots().forEach(sl => { (days[sl.date] = days[sl.date] || []).push(sl); });
   const list = Object.keys(days).sort().map(d => `<div class="pl-g"><b>${all.indexOf(d) >= 0 ? all.indexOf(d) + 1 + '일차 ' : ''}${fmt(parseD(d))}</b><ul>${days[d].map(s => `<li>${esc(s.time)} ${esc(s.label)}</li>`).join('')}</ul></div>`).join('');
   qrModal({ url: u.toString(), title: `${cur.title} 인원 점검`,
-    sub: `점검 시간이 되면 이 QR로 들어와 내 번호를 눌러요 · ${roll.before}분 전부터 ${roll.after}분 뒤까지`,
+    sub: `점검 시간이 되면 이 QR로 들어와 ${multiClass() ? '반과 ' : ''}번호를 눌러요 · ${roll.before}분 전부터 ${roll.after}분 뒤까지`,
     extra: `<div class="pl">${list}</div>` });
+}
+
+// 반 구성이나 이름이 바뀌면 학생 화면용 문서에도 반영
+async function syncChildren() {
+  const classes = classMap(classesOf(cur));
+  const l = await S.getList(cur.id, 'student');
+  if (l) await S.saveList(cur.id, 'student', { ...l, eventTitle: cur.title, date: cur.date, endDate: cur.endDate || '' });
+  for (const s of await S.listSafety(cur.id)) await S.saveSafety(cur.id, { ...s, classes, eventTitle: cur.title });
+  const r = await S.getRoll(cur.id);
+  if (r) { roll = { ...r, classes, eventTitle: cur.title }; await S.saveRoll(cur.id, roll); }
+  await touch();
 }
 
 setInterval(() => { if (cur && tab === 'day' && !$('#ov').classList.contains('show')) renderEvent(); }, 30000);
@@ -1023,7 +1181,7 @@ document.addEventListener('click', async ev => {
         await S.deleteEvent(cur.id); closeModal(); await loadEvents(); renderHome(); toast('지웠어요'); break;
       case 'tab': tab = el.dataset.tab; renderEvent(); break;
       case 'toggle': {
-        const t = cur.tasks.find(x => x.id === id); t.done = el.checked; renderEvent(); await saveCur(); break;
+        const t = cur.tasks.find(x => x.id === id); t.done = el.checked; renderEvent(); await saveCur('tasks'); break;
       }
       case 'add-task': taskForm(); break;
       case 'edit-task': taskForm(cur.tasks.find(x => x.id === id)); break;
@@ -1032,11 +1190,11 @@ document.addEventListener('click', async ev => {
         const d = taskOffset();
         if (id) Object.assign(cur.tasks.find(x => x.id === id), { t: text, d });
         else cur.tasks.push({ id: S.newId(), t: text, d, done: false });
-        closeModal(); renderEvent(); await saveCur(); break;
+        closeModal(); renderEvent(); await saveCur('tasks'); break;
       }
       case 'del-task':
         if (!confirm('이 업무를 지울까요?')) return;
-        cur.tasks = cur.tasks.filter(x => x.id !== id); closeModal(); renderEvent(); await saveCur(); break;
+        cur.tasks = cur.tasks.filter(x => x.id !== id); closeModal(); renderEvent(); await saveCur('tasks'); break;
       case 'new-survey': surveyForm(); break;
       case 'edit-survey': surveyForm(surveys.find(x => x.id === id)); break;
       case 'q-add': draft.questions.push({ id: S.newId(), type: 'star', text: '' }); renderSurveyForm(); break;
@@ -1048,19 +1206,19 @@ document.addEventListener('click', async ev => {
       case 'save-survey': await saveSurveyForm(); break;
       case 'toggle-open': {
         const s = surveys.find(x => x.id === id); s.open = !s.open; s.updatedAt = Date.now();
-        await S.saveSurvey(cur.id, s); renderEvent(); toast(s.open ? '다시 받기 시작했어요' : '마감했어요'); break;
+        await S.saveSurvey(cur.id, s); await touch(); renderEvent(); toast(s.open ? '다시 받기 시작했어요' : '마감했어요'); break;
       }
       case 'del-survey': {
         const s = surveys.find(x => x.id === id);
         if (!confirm(`'${s.title}' 설문과 응답 ${rcount[id] || 0}개를 지울까요?`)) return;
-        await S.deleteSurvey(cur.id, id); await openEvent(cur.id, true); toast('지웠어요'); break;
+        await S.deleteSurvey(cur.id, id); await touch(); await openEvent(cur.id, true); toast('지웠어요'); break;
       }
       case 'qr': showQR(id); break;
       case 'pack-start-s': await startStudentList(); break;
       case 'sf-new': safetyForm(); break;
       case 'roll-start': await startRoll(); break;
       case 'roll-board': rollBoard(id); break;
-      case 'roll-num': await toggleRollNum(id, Number(el.dataset.n)); break;
+      case 'roll-num': await toggleRollNum(id, el.dataset.c, Number(el.dataset.n)); break;
       case 'roll-edit': rollForm(); break;
       case 'roll-qr': rollQR(); break;
       case 'rs-add': { const d = tripDays(); rdraft.slots.push({ id: S.newId(), date: d[d.length - 1], time: '12:00', label: '' }); renderRollForm(); break; }
@@ -1071,20 +1229,41 @@ document.addEventListener('click', async ev => {
       case 'sf-qr': safetyQR(id); break;
       case 'sf-board': safetyBoard(id); break;
       case 'sf-board-refresh': vmap[id] = await S.listViews(cur.id, id); safetyBoard(id); renderEvent(); break;
-      case 'sf-num': await toggleNum(id, Number(el.dataset.n)); break;
+      case 'sf-num': await toggleNum(id, el.dataset.c, Number(el.dataset.n)); break;
+      case 'cls-filter': {
+        clsFilter = id; try { localStorage.setItem(fKey(), id); } catch (e) {}
+        if ($('#rollboard')) rollBoard($('#rollboard').dataset.slot);
+        else if ($('#sfboard')) safetyBoard($('#sfboard').dataset.id);
+        renderEvent(); break;
+      }
+      case 'team': await teamModal(); break;
+      case 'team-newcode': if (!confirm('새 링크를 만들면 예전 링크로는 들어올 수 없어요. 이미 함께하는 선생님은 그대로예요. 만들까요?')) return;
+        cur.inviteCode = newCode(); await saveCur('inviteCode'); await teamModal(); toast('새 초대 링크를 만들었어요'); break;
+      case 'team-remove': {
+        const nm = (cur.memberNames || {})[id] || '이 선생님';
+        if (!confirm(`${nm}을(를) 이 체험학습에서 내보낼까요?`)) return;
+        await S.removeMember(cur.id, id);
+        cur.members = (cur.members || []).filter(x => x !== id); if (cur.memberNames) delete cur.memberNames[id];
+        await teamModal(); renderEvent(); toast('내보냈어요'); break;
+      }
+      case 'team-leave':
+        if (!confirm('이 체험학습에서 나갈까요? 다시 들어오려면 초대 링크가 필요해요.')) return;
+        await S.removeMember(cur.id, user.uid); closeModal(); await loadEvents(); renderHome(); toast('나왔어요'); break;
+      case 'cf-add': cdraft.push({ id: 'c' + S.newId(), name: (cdraft.length + 1) + '반', total: cdraft.length ? cdraft[cdraft.length - 1].total : 25 }); renderClassRows(); break;
+      case 'cf-del': if (cdraft.length <= 1) return toast('반은 하나 이상 있어야 해요'); cdraft.splice(Number(el.dataset.i), 1); renderClassRows(); break;
       case 'sf-copy': await copySafetyRecord(id); break;
-      case 'sf-open': { const x = safeties.find(y => y.id === id); x.open = !x.open; x.updatedAt = Date.now(); await S.saveSafety(cur.id, x); renderEvent(); toast(x.open ? '다시 받기 시작했어요' : '마감했어요'); break; }
+      case 'sf-open': { const x = safeties.find(y => y.id === id); x.open = !x.open; x.updatedAt = Date.now(); await S.saveSafety(cur.id, x); await touch(); renderEvent(); toast(x.open ? '다시 받기 시작했어요' : '마감했어요'); break; }
       case 'sf-del': {
         const x = safeties.find(y => y.id === id);
         if (!confirm(`'${x.title}'과(와) 시청 체크 ${(vmap[id] || []).length}개를 지울까요?`)) return;
-        await S.deleteSafety(cur.id, id); await openEvent(cur.id, true); toast('지웠어요'); break;
+        await S.deleteSafety(cur.id, id); await touch(); await openEvent(cur.id, true); toast('지웠어요'); break;
       }
-      case 'pack-start-t': cur.teacherItems = packItems(PACK_TEACHER, true); renderEvent(); await saveCur(); toast('교사 준비물 목록을 만들었어요'); break;
+      case 'pack-start-t': cur.teacherItems = packItems(PACK_TEACHER, true); renderEvent(); await saveCur('teacherItems'); toast('교사 준비물 목록을 만들었어요'); break;
       case 'pack-edit': listForm(el.dataset.kind); break;
       case 'pack-save': await saveListForm(); break;
       case 'pack-qr': packQR(); break;
       case 'pack-refresh': pcount = await S.countChecks(cur.id, 'student'); renderEvent(); toast(`다 챙겼다고 알린 학생 ${pcount}명`); break;
-      case 'tcheck': { const it = cur.teacherItems.find(x => x.id === id); it.done = el.checked; renderEvent(); await saveCur(); break; }
+      case 'tcheck': { const it = cur.teacherItems.find(x => x.id === id); it.done = el.checked; renderEvent(); await saveCur('teacherItems'); break; }
       case 'lc-add': ldraft.cats.push({ name: '', leave: false, text: '' }); renderListForm(); break;
       case 'lc-del': ldraft.cats.splice(Number(el.dataset.i), 1); renderListForm(); break;
       case 'copy': await navigator.clipboard.writeText(el.dataset.url); toast('주소를 복사했어요'); break;
@@ -1100,6 +1279,7 @@ document.addEventListener('click', async ev => {
 
 document.addEventListener('input', ev => {
   const t = ev.target;
+  if (cdraft && t.dataset.ci !== undefined) { cdraft[Number(t.dataset.ci)][t.dataset.cf] = t.value; return; }
   if (rdraft) {
     if (t.dataset.ri !== undefined) rdraft.slots[Number(t.dataset.ri)][t.dataset.rf] = t.value;
     if (t.id === 'rl-total') rdraft.total = t.value; if (t.id === 'rl-before') rdraft.before = t.value; if (t.id === 'rl-after') rdraft.after = t.value;

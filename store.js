@@ -29,8 +29,26 @@
       });
     });
 
-    S.listEvents = async uid => docs(await db.collection('events').where('owner', '==', uid).get());
+    S.listEvents = async uid => {
+      const [a, b] = await Promise.all([
+        db.collection('events').where('members', 'array-contains', uid).get(),
+        db.collection('events').where('owner', '==', uid).get(),
+      ]);
+      const map = {};
+      [...docs(a), ...docs(b)].forEach(e => { map[e.id] = e; });
+      return Object.values(map);
+    };
     S.saveEvent = async e => { const { id, ...rest } = e; await evRef(id).set(rest); };
+    S.updateEvent = async (id, fields) => evRef(id).update(fields);
+    S.watchEvent = (id, cb, onErr) => evRef(id).onSnapshot(d => { if (d.exists) cb({ id: d.id, ...d.data() }); else cb(null); }, e => onErr && onErr(e));
+    S.joinEvent = async (eid, code, uid, name) => evRef(eid).update({
+      members: firebase.firestore.FieldValue.arrayUnion(uid),
+      ['memberNames.' + uid]: name, lastJoin: code,
+    });
+    S.removeMember = async (eid, uid) => evRef(eid).update({
+      members: firebase.firestore.FieldValue.arrayRemove(uid),
+      ['memberNames.' + uid]: firebase.firestore.FieldValue.delete(),
+    });
     S.deleteEvent = async id => {
       const svs = await svCol(id).get();
       for (const s of svs.docs) {
@@ -78,18 +96,20 @@
       await sfCol(eid).doc(sid).delete();
     };
     S.listViews = async (eid, sid) => docs(await vwCol(eid, sid).get());
-    S.addView = async (eid, sid, n, place, by) => {
+    S.addView = async (eid, sid, c, n, place, by) => {
+      const ref = vwCol(eid, sid).doc(c + '_' + n);
       try {
-        await vwCol(eid, sid).doc(String(n)).set({ n, place, by, at: firebase.firestore.FieldValue.serverTimestamp() });
+        await ref.set({ c, n, place, by, at: firebase.firestore.FieldValue.serverTimestamp() });
       } catch (e) {
         if (e.code === 'permission-denied') {
-          const ex = await vwCol(eid, sid).doc(String(n)).get().catch(() => null);
+          const ex = await ref.get().catch(() => null);
           if (ex && ex.exists) throw new Error('already');
         }
         throw e;
       }
     };
-    S.removeView = async (eid, sid, n) => vwCol(eid, sid).doc(String(n)).delete();
+    S.removeView = async (eid, sid, c, n) => vwCol(eid, sid).doc(c + '_' + n).delete();
+    S.removeViewLegacy = async (eid, sid, docId) => vwCol(eid, sid).doc(docId).delete();
     // 당일 인원 점검
     const rlDoc = eid => evRef(eid).collection('roll').doc('main');
     const mkCol = eid => rlDoc(eid).collection('marks');
@@ -97,19 +117,21 @@
     S.saveRoll = async (eid, data) => rlDoc(eid).set(data);
     S.listMarks = async eid => docs(await mkCol(eid).get());
     S.watchMarks = (eid, cb, onErr) => mkCol(eid).onSnapshot(snap => cb(docs(snap)), e => onErr && onErr(e));
-    S.addMark = async (eid, slot, n, src, by) => {
+    S.addMark = async (eid, slot, c, n, src, by) => {
+      const ref = mkCol(eid).doc(slot + '_' + c + '_' + n);
       try {
-        await mkCol(eid).doc(slot + '_' + n).set({ slot, n, src, by, at: firebase.firestore.FieldValue.serverTimestamp() });
+        await ref.set({ slot, c, n, src, by, at: firebase.firestore.FieldValue.serverTimestamp() });
       } catch (e) {
         if (e.code === 'permission-denied') {
-          const ex = await mkCol(eid).doc(slot + '_' + n).get().catch(() => null);
+          const ex = await ref.get().catch(() => null);
           if (ex && ex.exists) throw new Error('already');
           throw new Error('closed');
         }
         throw e;
       }
     };
-    S.removeMark = async (eid, slot, n) => mkCol(eid).doc(slot + '_' + n).delete();
+    S.removeMark = async (eid, slot, c, n) => mkCol(eid).doc(slot + '_' + c + '_' + n).delete();
+    S.removeMarkLegacy = async (eid, docId) => mkCol(eid).doc(docId).delete();
     S.listSurveys = async eid => docs(await svCol(eid).get());
     S.getSurvey = async (eid, sid) => {
       const d = await svCol(eid).doc(sid).get();
@@ -139,7 +161,9 @@
     };
     const save = d => localStorage.setItem(KEY, JSON.stringify(d));
     const clone = o => JSON.parse(JSON.stringify(o));
-    const demoUser = { uid: 'demo-teacher', displayName: '체험 사용자' };
+    // 체험 모드에서 두 선생님을 시험할 때: 주소 끝에 ?demo=b 를 붙이면 다른 선생님으로 들어와요
+    const dParam = new URLSearchParams(location.search).get('demo');
+    const demoUser = dParam ? { uid: 'demo-' + dParam, displayName: '체험 선생님 ' + dParam.toUpperCase() } : { uid: 'demo-teacher', displayName: '체험 사용자' };
 
     S.onUser = cb => setTimeout(() => cb(demoUser), 0);
     S.signInGoogle = async () => {};
@@ -150,8 +174,28 @@
       return u;
     };
     S.listEvents = async uid => Object.entries(load().events)
-      .filter(([, e]) => e.owner === uid).map(([id, e]) => ({ id, ...clone(e) }));
+      .filter(([, e]) => e.owner === uid || (e.members || []).includes(uid)).map(([id, e]) => ({ id, ...clone(e) }));
     S.saveEvent = async e => { const d = load(); const { id, ...rest } = e; d.events[id] = rest; save(d); };
+    S.updateEvent = async (id, fields) => {
+      const d = load(); if (!d.events[id]) throw new Error('nodoc');
+      Object.assign(d.events[id], clone(fields)); save(d);
+    };
+    S.watchEvent = (id, cb) => {
+      let last = '';
+      const run = () => { const e = load().events[id]; const k = JSON.stringify(e || null); if (k !== last) { last = k; cb(e ? { id, ...clone(e) } : null); } };
+      run(); const t = setInterval(run, 1500); return () => clearInterval(t);
+    };
+    S.joinEvent = async (eid, code, uid, name) => {
+      const d = load(); const e = d.events[eid];
+      if (!e || !e.inviteCode || e.inviteCode !== code) { const er = new Error('badcode'); er.code = 'permission-denied'; throw er; }
+      e.members = [...new Set([...(e.members || []), uid])];
+      e.memberNames = { ...(e.memberNames || {}), [uid]: name }; save(d);
+    };
+    S.removeMember = async (eid, uid) => {
+      const d = load(); const e = d.events[eid]; if (!e) return;
+      e.members = (e.members || []).filter(x => x !== uid);
+      if (e.memberNames) delete e.memberNames[uid]; save(d);
+    };
     S.deleteEvent = async id => {
       const d = load(); delete d.events[id]; delete d.surveys[id]; delete d.lists[id]; delete d.safety[id]; delete d.roll[id]; delete d.marks[id];
       Object.keys(d.views).forEach(k => { if (k.startsWith(id + '|')) delete d.views[k]; });
@@ -180,15 +224,16 @@
       const d = load(); if (d.safety[eid]) delete d.safety[eid][sid]; delete d.views[eid + '|' + sid]; save(d);
     };
     S.listViews = async (eid, sid) => Object.entries(load().views[eid + '|' + sid] || {}).map(([id, v]) => ({ id, ...clone(v) }));
-    S.addView = async (eid, sid, n, place, by) => {
-      const d = load(); const k = eid + '|' + sid;
+    S.addView = async (eid, sid, c, n, place, by) => {
+      const d = load(); const k = eid + '|' + sid, id = c + '_' + n;
       d.views[k] = d.views[k] || {};
-      if (d.views[k][n]) throw new Error('already');
-      d.views[k][n] = { n, place, by, at: Date.now() }; save(d);
+      if (d.views[k][id]) throw new Error('already');
+      d.views[k][id] = { c, n, place, by, at: Date.now() }; save(d);
     };
-    S.removeView = async (eid, sid, n) => {
-      const d = load(); const k = eid + '|' + sid; if (d.views[k]) delete d.views[k][n]; save(d);
+    S.removeView = async (eid, sid, c, n) => {
+      const d = load(); const k = eid + '|' + sid; if (d.views[k]) delete d.views[k][c + '_' + n]; save(d);
     };
+    S.removeViewLegacy = async (eid, sid, docId) => { const d = load(); const k = eid + '|' + sid; if (d.views[k]) delete d.views[k][docId]; save(d); };
     S.listSurveys = async eid => Object.entries(load().surveys[eid] || {}).map(([id, s]) => ({ id, ...clone(s) }));
     S.getSurvey = async (eid, sid) => {
       const s = (load().surveys[eid] || {})[sid];
@@ -223,15 +268,16 @@
       const run = async () => { const m = await S.listMarks(eid); const k = JSON.stringify(m); if (k !== last) { last = k; cb(m); } };
       run(); const t = setInterval(run, 1500); return () => clearInterval(t);
     };
-    S.addMark = async (eid, slot, n, src, by) => {
-      const d = load(); const r = d.roll[eid]; const id = slot + '_' + n;
+    S.addMark = async (eid, slot, c, n, src, by) => {
+      const d = load(); const r = d.roll[eid]; const id = slot + '_' + c + '_' + n;
       d.marks[eid] = d.marks[eid] || {};
       if (d.marks[eid][id]) throw new Error('already');
       const sl = r && r.slots[slot];
       if (src === 'student' && (!sl || Date.now() < sl.openAt || Date.now() > sl.closeAt)) throw new Error('closed');
-      d.marks[eid][id] = { slot, n, src, by, at: Date.now() }; save(d);
+      d.marks[eid][id] = { slot, c, n, src, by, at: Date.now() }; save(d);
     };
-    S.removeMark = async (eid, slot, n) => { const d = load(); if (d.marks[eid]) delete d.marks[eid][slot + '_' + n]; save(d); };
+    S.removeMark = async (eid, slot, c, n) => { const d = load(); if (d.marks[eid]) delete d.marks[eid][slot + '_' + c + '_' + n]; save(d); };
+    S.removeMarkLegacy = async (eid, docId) => { const d = load(); if (d.marks[eid]) delete d.marks[eid][docId]; save(d); };
   }
   window.Store = S;
 })();

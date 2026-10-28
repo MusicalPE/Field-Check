@@ -6,26 +6,52 @@ service cloud.firestore {
     function isTeacher() {
       return signedIn() && request.auth.token.firebase.sign_in_provider != 'anonymous';
     }
+    function ev(eid) {
+      return get(/databases/$(database)/documents/events/$(eid)).data;
+    }
+    // 함께하는 선생님인지 (만든 선생님 포함)
+    function isMember(eid) {
+      return isTeacher() && (ev(eid).owner == request.auth.uid
+        || request.auth.uid in ev(eid).get('members', []));
+    }
     function rollOf(eid, rid) {
       return get(/databases/$(database)/documents/events/$(eid)/roll/$(rid)).data;
     }
-    function ownsEvent(eid) {
-      return signedIn() &&
-        get(/databases/$(database)/documents/events/$(eid)).data.owner == request.auth.uid;
+    function safetyOf(eid, sid) {
+      return get(/databases/$(database)/documents/events/$(eid)/safety/$(sid)).data;
     }
 
-    // 체험학습: 만든 선생님만 보고 고칠 수 있음 (학생 익명 계정은 만들 수 없음)
+    // 체험학습: 함께하는 선생님만 보고 고칠 수 있음 (학생 익명 계정은 못 만듦)
     match /events/{eid} {
-      allow read, delete: if signedIn() && resource.data.owner == request.auth.uid;
-      allow create: if isTeacher() && request.resource.data.owner == request.auth.uid;
-      allow update: if signedIn() && resource.data.owner == request.auth.uid
-                    && request.resource.data.owner == resource.data.owner;
+      function memberHere() {
+        return isTeacher() && (resource.data.owner == request.auth.uid
+          || request.auth.uid in resource.data.get('members', []));
+      }
+      allow read: if memberHere();
+      allow create: if isTeacher() && request.resource.data.owner == request.auth.uid
+        && request.resource.data.members == [request.auth.uid];
+      allow delete: if isTeacher() && resource.data.owner == request.auth.uid;
+      // 함께하는 선생님의 수정: 만든 사람은 그대로, 선생님 명단은 만든 사람만 줄일 수 있음
+      allow update: if memberHere()
+        && request.resource.data.owner == resource.data.owner
+        && (request.resource.data.get('members', []).toSet() == resource.data.get('members', []).toSet()
+          || resource.data.owner == request.auth.uid
+          || request.resource.data.get('members', []).toSet()
+               == resource.data.get('members', []).toSet().union([request.auth.uid].toSet()));
+      // 초대 링크로 들어오기: 초대 코드가 맞을 때 자기 자신만 명단에 더함
+      allow update: if isTeacher()
+        && resource.data.get('inviteCode', '') is string
+        && resource.data.get('inviteCode', '').size() >= 8
+        && request.resource.data.get('lastJoin', '') == resource.data.inviteCode
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members', 'memberNames', 'lastJoin'])
+        && request.resource.data.members.toSet()
+             == resource.data.get('members', []).toSet().union([request.auth.uid].toSet())
+        && request.resource.data.get('memberNames', {}).diff(resource.data.get('memberNames', {})).affectedKeys().hasOnly([request.auth.uid]);
 
       // 설문: 학생도 읽을 수 있음(질문만 들어 있음), 고치는 건 선생님만
       match /surveys/{sid} {
         allow read: if signedIn();
-        allow create, update: if ownsEvent(eid) && request.resource.data.owner == request.auth.uid;
-        allow delete: if ownsEvent(eid);
+        allow write: if isMember(eid);
 
         // 응답: 기기(익명 계정)마다 한 번만, 설문이 열려 있을 때만
         match /responses/{rid} {
@@ -34,71 +60,72 @@ service cloud.firestore {
             && request.resource.data.keys().hasOnly(['answers', 'at'])
             && request.resource.data.answers is map
             && request.resource.data.answers.size() <= 30;
-          allow read: if signedIn() && (request.auth.uid == rid || ownsEvent(eid));
-          allow delete: if ownsEvent(eid);
+          allow read: if signedIn() && (request.auth.uid == rid || isMember(eid));
+          allow delete: if isMember(eid);
         }
       }
 
       // 준비물 목록: 학생도 읽을 수 있음(목록만 들어 있음), 고치는 건 선생님만
       match /lists/{lid} {
         allow read: if signedIn();
-        allow create, update: if ownsEvent(eid) && request.resource.data.owner == request.auth.uid;
-        allow delete: if ownsEvent(eid);
+        allow write: if isMember(eid);
 
         // "다 챙겼어요" 알림: 기기(익명 계정)마다 하나, 시간만 저장
         match /checks/{rid} {
           allow create: if signedIn() && request.auth.uid == rid
             && request.resource.data.keys().hasOnly(['at']);
-          allow read: if signedIn() && (request.auth.uid == rid || ownsEvent(eid));
-          allow delete: if ownsEvent(eid);
+          allow read: if signedIn() && (request.auth.uid == rid || isMember(eid));
+          allow delete: if isMember(eid);
         }
       }
 
-      // 당일 인원 점검: 학생도 읽을 수 있음(점검 시간표만), 고치는 건 선생님만
+      // 당일 인원 점검: 학생도 읽을 수 있음(점검 시간표·반 구성만), 고치는 건 선생님만
       match /roll/{rid} {
         allow read: if signedIn();
-        allow create, update: if ownsEvent(eid) && request.resource.data.owner == request.auth.uid;
-        allow delete: if ownsEvent(eid);
+        allow write: if isMember(eid);
 
-        // 출석 표시: 점검마다 번호 하나씩. 학생은 정해진 시간 안에서만, 선생님은 언제나
+        // 출석 표시: 점검마다 반·번호 하나씩. 학생은 정해진 시간 안에서만, 선생님은 언제나
         match /marks/{mid} {
           allow read: if signedIn();
           allow create: if signedIn()
-            && request.resource.data.keys().hasOnly(['slot', 'n', 'src', 'by', 'at'])
+            && request.resource.data.keys().hasOnly(['slot', 'c', 'n', 'src', 'by', 'at'])
             && request.resource.data.by == request.auth.uid
             && request.resource.data.n is int
             && request.resource.data.n >= 1
             && request.resource.data.slot is string
-            && mid == request.resource.data.slot + '_' + string(request.resource.data.n)
+            && request.resource.data.c is string
+            && mid == request.resource.data.slot + '_' + request.resource.data.c + '_' + string(request.resource.data.n)
             && request.resource.data.slot in rollOf(eid, rid).slots
-            && request.resource.data.n <= rollOf(eid, rid).total
-            && ((request.resource.data.src == 'teacher' && ownsEvent(eid))
+            && request.resource.data.c in rollOf(eid, rid).classes
+            && request.resource.data.n <= rollOf(eid, rid).classes[request.resource.data.c].total
+            && ((request.resource.data.src == 'teacher' && isMember(eid))
               || (request.resource.data.src == 'student'
                 && request.time.toMillis() >= rollOf(eid, rid).slots[request.resource.data.slot].openAt
                 && request.time.toMillis() <= rollOf(eid, rid).slots[request.resource.data.slot].closeAt));
-          allow delete: if ownsEvent(eid);
+          allow delete: if isMember(eid);
         }
       }
 
-      // 안전 교육: 학생도 읽을 수 있음(영상 주소·안내만), 고치는 건 선생님만
+      // 안전 교육: 학생도 읽을 수 있음(영상 주소·안내·반 구성만), 고치는 건 선생님만
       match /safety/{sid} {
         allow read: if signedIn();
-        allow create, update: if ownsEvent(eid) && request.resource.data.owner == request.auth.uid;
-        allow delete: if ownsEvent(eid);
+        allow write: if isMember(eid);
 
-        // 시청 체크: 번호마다 하나, 번호와 시청 장소만 저장 (이름 없음)
-        match /views/{n} {
+        // 시청 체크: 반·번호마다 하나, 시청 장소만 저장 (이름 없음)
+        match /views/{vid} {
           allow read: if signedIn();
           allow create: if signedIn()
-            && request.resource.data.keys().hasOnly(['n', 'place', 'by', 'at'])
+            && request.resource.data.keys().hasOnly(['c', 'n', 'place', 'by', 'at'])
             && request.resource.data.by == request.auth.uid
             && request.resource.data.n is int
-            && string(request.resource.data.n) == n
             && request.resource.data.n >= 1
-            && request.resource.data.n <= get(/databases/$(database)/documents/events/$(eid)/safety/$(sid)).data.total
+            && request.resource.data.c is string
+            && vid == request.resource.data.c + '_' + string(request.resource.data.n)
+            && request.resource.data.c in safetyOf(eid, sid).classes
+            && request.resource.data.n <= safetyOf(eid, sid).classes[request.resource.data.c].total
             && request.resource.data.place in ['home', 'class', 'alone', 'teacher']
-            && (ownsEvent(eid) || get(/databases/$(database)/documents/events/$(eid)/safety/$(sid)).data.open == true);
-          allow delete: if ownsEvent(eid);
+            && (isMember(eid) || safetyOf(eid, sid).open == true);
+          allow delete: if isMember(eid);
         }
       }
     }

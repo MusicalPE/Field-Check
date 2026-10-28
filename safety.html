@@ -64,7 +64,7 @@ const PLACES = { home: '집에서 가족과', class: '교실에서', alone: '혼
 const p = new URLSearchParams(location.search);
 const eid = p.get('e'), sid = p.get('s');
 const KEY = 'fieldcheck-safety-' + eid + '-' + sid;
-let uid = null, sf = null, taken = new Set(), place = '', num = 0, mine = null;
+let uid = null, sf = null, taken = new Set(), place = '', num = 0, cls = '', mine = null, classes = [];
 try { mine = JSON.parse(localStorage.getItem(KEY)); } catch (e) {}
 
 function message(big, title, text, code) {
@@ -92,7 +92,12 @@ async function boot() {
     sf = await S.getSafety(eid, sid);
     if (!sf) return message('?', '안전 교육을 찾을 수 없어요', '선생님께 QR을 다시 확인해 달라고 해 주세요.');
     step = '번호 확인';
-    taken = new Set((await S.listViews(eid, sid)).map(v => Number(v.n)));
+    classes = sf.classes && Object.keys(sf.classes).length
+      ? Object.entries(sf.classes).map(([id, c]) => ({ id, ...c })).sort((a, b) => (a.order || 0) - (b.order || 0))
+      : [{ id: 'c1', name: '우리 반', total: sf.total || 25 }];
+    if (classes.length === 1) cls = classes[0].id;
+    if (mine && !mine.c) mine.c = classes[0].id;
+    taken = new Set((await S.listViews(eid, sid)).map(v => (v.c || classes[0].id) + '_' + Number(v.n)));
     render();
   } catch (e) {
     console.error(e);
@@ -108,6 +113,8 @@ let vids = [];   // {url, yt, watched:Set, dur, pct, confirmed, player, failed}
 const vKey = i => KEY + '-v' + i;
 function loadWatched(i) { try { return new Set(JSON.parse(localStorage.getItem(vKey(i))) || []); } catch (e) { return new Set(); } }
 function saveWatched(v, i) { try { localStorage.setItem(vKey(i), JSON.stringify([...v.watched])); } catch (e) {} }
+const cName = id => (classes.find(c => c.id === id) || {}).name || '';
+const who = (c, n) => `${classes.length > 1 ? cName(c) + ' ' : ''}${n}번`;
 const vidOk = v => !requireWatch() || (v.yt && !v.failed ? v.pct >= NEED : v.confirmed);
 const allWatched = () => vids.every(vidOk);
 
@@ -199,25 +206,27 @@ function renderCheck() {
   const box = document.getElementById('check');
   if (!box) return;
   let html;
-  if (mine && taken.has(mine.n)) {
-    html = `<div class="card done">${mine.n}번, 시청 체크를 마쳤어요. 고마워요!</div>
+  if (mine && taken.has(mine.c + '_' + mine.n)) {
+    html = `<div class="card done">${who(mine.c, mine.n)}, 시청 체크를 마쳤어요. 고마워요!</div>
       ${sf.open ? '<button type="button" class="pl" id="another" style="width:100%">같은 휴대폰으로 다른 번호도 체크하기 (형제·자매)</button>' : ''}`;
   } else if (!sf.open) {
     html = `<div class="card done" style="background:#eef0f4;color:var(--sub);border-color:var(--line)">시청 체크가 마감되었어요.</div>`;
   } else {
     const ready = allWatched();
+    const cc = classes.find(c => c.id === cls);
     let nums = '';
-    for (let i = 1; i <= sf.total; i++) nums += `<button type="button" class="num ${num === i ? 'on' : ''}" data-n="${i}" ${taken.has(i) ? 'disabled' : ''}>${i}</button>`;
-    let label = '장소와 번호를 골라 주세요';
+    if (cc) for (let i = 1; i <= cc.total; i++) nums += `<button type="button" class="num ${num === i ? 'on' : ''}" data-n="${i}" ${taken.has(cls + '_' + i) ? 'disabled' : ''}>${i}</button>`;
+    let label = classes.length > 1 ? '장소와 반, 번호를 골라 주세요' : '장소와 번호를 골라 주세요';
     if (!ready) label = '영상을 90% 넘게 보면 체크할 수 있어요';
-    else if (place && num) label = num + '번, 다 봤어요';
+    else if (place && cls && num) label = who(cls, num) + ', 다 봤어요';
+    const clsPick = classes.length > 1 ? `<div class="places" style="grid-template-columns:repeat(auto-fill,minmax(80px,1fr));margin-bottom:12px">${classes.map(c => `<button type="button" class="pl ${cls === c.id ? 'on' : ''}" data-c="${c.id}">${esc(c.name)}</button>`).join('')}</div>` : '';
     html = `
       <div class="card"><span class="step">2단계</span><h2>어디서 봤나요?</h2>
         <div class="places">${Object.entries(PLACES).map(([k, v]) => `<button type="button" class="pl ${place === k ? 'on' : ''}" data-p="${k}">${v}</button>`).join('')}</div></div>
-      <div class="card"><span class="step">3단계</span><h2>내 번호를 눌러 주세요</h2>
-        <div class="nums">${nums}</div>
+      <div class="card"><span class="step">3단계</span><h2>${classes.length > 1 ? '내 반과 번호를 눌러 주세요' : '내 번호를 눌러 주세요'}</h2>
+        ${clsPick}${cc ? `<div class="nums">${nums}</div>` : '<div class="hint">먼저 반을 골라 주세요.</div>'}
         <div class="hint">회색 번호는 이미 체크된 번호예요. 내 번호가 회색이면 선생님께 말씀드려요.</div></div>
-      <button class="submit" id="submit" ${ready && place && num ? '' : 'disabled'}>${label}</button>
+      <button class="submit" id="submit" ${ready && place && cls && num ? '' : 'disabled'}>${label}</button>
       <div class="err" id="err"></div>`;
   }
   box.innerHTML = html;
@@ -230,23 +239,25 @@ app.addEventListener('change', ev => {
 app.addEventListener('click', async ev => {
   const pb = ev.target.closest('[data-p]');
   if (pb) { place = pb.dataset.p; renderCheck(); return; }
+  const cb = ev.target.closest('[data-c]');
+  if (cb) { cls = cb.dataset.c; num = 0; renderCheck(); return; }
   const nb = ev.target.closest('[data-n]');
   if (nb && !nb.disabled) { num = Number(nb.dataset.n); renderCheck(); return; }
-  if (ev.target.id === 'another') { mine = null; place = ''; num = 0; renderCheck(); return; }
+  if (ev.target.id === 'another') { mine = null; place = ''; num = 0; if (classes.length > 1) cls = ''; renderCheck(); return; }
   if (ev.target.id === 'submit') {
     if (!allWatched()) return;
     const btn = ev.target; btn.disabled = true; btn.textContent = '보내는 중...';
     try {
-      await S.addView(eid, sid, num, place, uid);
-      mine = { n: num }; try { localStorage.setItem(KEY, JSON.stringify(mine)); } catch (e) {}
-      taken.add(num); renderCheck();
+      await S.addView(eid, sid, cls, num, place, uid);
+      mine = { c: cls, n: num }; try { localStorage.setItem(KEY, JSON.stringify(mine)); } catch (e) {}
+      taken.add(cls + '_' + num); renderCheck();
     } catch (e) {
       console.error(e);
       if (String(e.message).includes('already')) {
-        taken.add(num); num = 0; renderCheck();
+        taken.add(cls + '_' + num); num = 0; renderCheck();
         document.getElementById('err').textContent = '방금 다른 사람이 그 번호를 체크했어요. 내 번호가 맞다면 선생님께 말씀드려요.';
       } else {
-        btn.disabled = false; btn.textContent = num + '번, 다 봤어요';
+        btn.disabled = false; btn.textContent = who(cls, num) + ', 다 봤어요';
         document.getElementById('err').textContent = '보내지 못했어요. 마감되었거나 인터넷이 끊겼을 수 있어요.';
       }
     }

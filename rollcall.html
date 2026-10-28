@@ -27,6 +27,9 @@
   .num{border:2px solid var(--line);background:#fff;border-radius:12px;padding:10px 0;font:inherit;font-weight:900;font-size:18px;cursor:pointer;color:var(--ink)}
   .num.on{border-color:var(--pri);background:var(--pri);color:#fff}
   .num:disabled{background:#eef0f4;color:#b3bac7;border-color:#eef0f4;cursor:default}
+  .cls{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .cbtn{flex:1;min-width:72px;border:2px solid var(--line);background:#fff;border-radius:12px;padding:10px 6px;font:inherit;font-weight:700;cursor:pointer;color:var(--ink)}
+  .cbtn.on{border-color:var(--pri);background:var(--pri-soft);color:var(--pri)}
   .done{background:var(--ok-soft);border-color:#b9e6d3;text-align:center}
   .done .ck{font-size:44px;color:var(--ok);line-height:1}
   .done b{display:block;font-size:20px;color:var(--ok);margin-top:6px}
@@ -62,15 +65,19 @@ const WK = '일월화수목금토';
 const fmtD = s => { const [y, m, d] = s.split('-').map(Number); const dt = new Date(y, m - 1, d); return `${m}월 ${d}일(${WK[dt.getDay()]})`; };
 const eid = new URLSearchParams(location.search).get('e');
 const KEY = 'fieldcheck-roll-' + eid;
-let uid = null, roll = null, marks = [], myNum = 0, pick = 0, changing = false, busy = false;
-try { myNum = Number(localStorage.getItem(KEY)) || 0; } catch (e) {}
+let uid = null, roll = null, marks = [], myC = '', myNum = 0, pickC = '', pick = 0, changing = false, busy = false, classes = [];
+try { const m = JSON.parse(localStorage.getItem(KEY)); if (m && m.n) { myC = m.c || ''; myNum = Number(m.n); } } catch (e) {}
+function saveMine() { try { localStorage.setItem(KEY, JSON.stringify({ c: myC, n: myNum })); } catch (e) {} }
 
 function message(big, title, text, code) {
   app.innerHTML = `<div class="msg"><div class="bigt">${big}</div><h2>${esc(title)}</h2><p>${esc(text)}</p>${code ? `<p style="margin-top:14px;font-size:12px">오류 코드: ${esc(code)}</p>` : ''}</div>`;
 }
 const slots = () => Object.values(roll.slots).sort((a, b) => a.openAt - b.openAt);
 const isOpen = s => Date.now() >= s.openAt && Date.now() <= s.closeAt;
-const marked = (slot, n) => marks.some(m => m.slot === slot && Number(m.n) === n);
+const cOf = m => m.c || (classes[0] && classes[0].id);
+const marked = (slot, c, n) => marks.some(m => m.slot === slot && cOf(m) === c && Number(m.n) === n);
+const cName = id => (classes.find(c => c.id === id) || {}).name || '';
+const who = (c, n) => `${classes.length > 1 ? cName(c) + ' ' : ''}${n}번`;
 function until(ms) {
   const m = Math.max(0, Math.round(ms / 60000));
   if (m < 60) return `${m}분`;
@@ -86,7 +93,13 @@ async function boot() {
     step = '점검 시간 읽기';
     roll = await S.getRoll(eid);
     if (!roll) return message('?', '인원 점검을 찾을 수 없어요', '선생님께 QR을 다시 확인해 달라고 해 주세요.');
-    if (myNum > roll.total) myNum = 0;
+    classes = roll.classes && Object.keys(roll.classes).length
+      ? Object.entries(roll.classes).map(([id, c]) => ({ id, ...c })).sort((a, b) => (a.order || 0) - (b.order || 0))
+      : [{ id: 'c1', name: '우리 반', total: roll.total || 25 }];
+    if (!myC && myNum) myC = classes[0].id;
+    const mc = classes.find(c => c.id === myC);
+    if (!mc || myNum > mc.total) { myC = ''; myNum = 0; }
+    if (classes.length === 1) pickC = classes[0].id;
     step = '체크 확인';
     S.watchMarks(eid, m => { marks = m; if (!busy) render(); }, e => console.error(e));
     render();
@@ -104,27 +117,25 @@ function render() {
   if (open.length) {
     const s = open[0];
     const head = `<div class="lab">지금 점검 중</div><div class="ttl">${esc(s.time)} ${esc(s.label)}</div><div class="left">${until(s.closeAt - Date.now())} 안에 체크해 주세요</div>`;
-    if (myNum && marked(s.id, myNum) && !changing) {
-      main = `<div class="card done"><div class="ck">✓</div><b>${myNum}번, 확인됐어요!</b><div class="hint">${esc(s.time)} ${esc(s.label)}</div>
+    if (myNum && marked(s.id, myC, myNum) && !changing) {
+      main = `<div class="card done"><div class="ck">✓</div><b>${who(myC, myNum)}, 확인됐어요!</b><div class="hint">${esc(s.time)} ${esc(s.label)}</div>
         <button class="link" id="change">내 번호가 아니에요</button></div>`;
     } else if (myNum && !changing) {
       main = `<div class="card now">${head}
-        <button class="big" id="here">${myNum}번, 저 여기 있어요!</button>
+        <button class="big" id="here">${who(myC, myNum)}, 저 여기 있어요!</button>
         <button class="link" id="change">내 번호가 아니에요</button><div class="err" id="err"></div></div>`;
     } else {
-      let nums = '';
-      for (let i = 1; i <= roll.total; i++) nums += `<button type="button" class="num ${pick === i ? 'on' : ''}" data-n="${i}" ${marked(s.id, i) ? 'disabled' : ''}>${i}</button>`;
       main = `<div class="card now">${head}</div>
-        <div class="card"><b>내 번호를 눌러 주세요</b><div class="nums">${nums}</div>
+        <div class="card"><b>${classes.length > 1 ? '내 반과 번호를 눌러 주세요' : '내 번호를 눌러 주세요'}</b>${pickerBody(s.id)}
           <div class="hint">한 번 고르면 다음 점검부터는 버튼 하나만 누르면 돼요. 회색 번호는 이미 확인된 번호예요.</div>
-          <button class="big" id="here" ${pick ? '' : 'disabled'}>${pick ? pick + '번, 저 여기 있어요!' : '번호를 골라 주세요'}</button>
+          <button class="big" id="here" ${pickC && pick ? '' : 'disabled'}>${pickC && pick ? who(pickC, pick) + ', 저 여기 있어요!' : (classes.length > 1 ? '반과 번호를 골라 주세요' : '번호를 골라 주세요')}</button>
           <div class="err" id="err"></div></div>`;
     }
   } else if (next) {
     main = `<div class="card wait"><div class="hint" style="margin:0">다음 점검</div>
       <div class="ttl">${esc(next.time)} ${esc(next.label)}</div>
       <div class="hint" style="margin:0">${fmtD(next.date)} · ${until(next.openAt - Date.now())} 뒤에 열려요</div>
-      ${myNum ? `<div class="hint">내 번호: ${myNum}번 <button class="link" id="change" style="margin:0">바꾸기</button></div>` : ''}</div>`;
+      ${myNum ? `<div class="hint">내 번호: ${who(myC, myNum)} <button class="link" id="change" style="margin:0">바꾸기</button></div>` : ''}</div>`;
     if (changing) main += numberPicker();
   } else {
     main = `<div class="card wait"><div class="ttl">모든 점검이 끝났어요</div><div class="hint" style="margin:0">함께해 주어서 고마워요.</div></div>`;
@@ -133,44 +144,51 @@ function render() {
   list.forEach(s => { (days[s.date] = days[s.date] || []).push(s); });
   const sch = Object.keys(days).sort().map(d => `<div class="card sch"><h2>${fmtD(d)}</h2>${days[d].map(s => {
     const cls = isOpen(s) ? 'cur' : Date.now() > s.closeAt ? 'past' : '';
-    const me = myNum && marked(s.id, myNum) ? ' · 확인' : '';
+    const me = myNum && marked(s.id, myC, myNum) ? ' · 확인' : '';
     return `<div class="row ${cls}"><span class="t">${esc(s.time)}</span><span>${esc(s.label)}${me}</span></div>`;
   }).join('')}</div>`).join('');
   app.innerHTML = `<div class="top"><div class="ev">인원 점검</div><h1>${esc(roll.eventTitle)}</h1></div>${main}${sch}`;
 }
-function numberPicker() {
+function pickerBody(slotId) {
+  const chips = classes.length > 1 ? `<div class="cls">${classes.map(c => `<button type="button" class="cbtn ${pickC === c.id ? 'on' : ''}" data-c="${c.id}">${esc(c.name)}</button>`).join('')}</div>` : '';
+  const cc = classes.find(c => c.id === pickC);
   let nums = '';
-  for (let i = 1; i <= roll.total; i++) nums += `<button type="button" class="num ${pick === i ? 'on' : ''}" data-n="${i}">${i}</button>`;
-  return `<div class="card"><b>내 번호를 골라 주세요</b><div class="nums">${nums}</div>
-    <button class="big" id="save" ${pick ? '' : 'disabled'} style="background:var(--pri)">${pick ? pick + '번으로 정하기' : '번호를 골라 주세요'}</button></div>`;
+  if (cc) for (let i = 1; i <= cc.total; i++) nums += `<button type="button" class="num ${pick === i ? 'on' : ''}" data-n="${i}" ${slotId && marked(slotId, pickC, i) ? 'disabled' : ''}>${i}</button>`;
+  return chips + (cc ? `<div class="nums">${nums}</div>` : '<div class="hint">먼저 반을 골라 주세요.</div>');
+}
+function numberPicker() {
+  return `<div class="card"><b>${classes.length > 1 ? '내 반과 번호를 골라 주세요' : '내 번호를 골라 주세요'}</b>${pickerBody(null)}
+    <button class="big" id="save" ${pickC && pick ? '' : 'disabled'} style="background:var(--pri)">${pickC && pick ? who(pickC, pick) + '으로 정하기' : '골라 주세요'}</button></div>`;
 }
 
 app.addEventListener('click', async ev => {
+  const cb = ev.target.closest('[data-c]');
+  if (cb) { pickC = cb.dataset.c; pick = 0; render(); return; }
   const nb = ev.target.closest('[data-n]');
   if (nb && !nb.disabled) { pick = Number(nb.dataset.n); render(); return; }
-  if (ev.target.id === 'change') { changing = true; pick = 0; render(); return; }
+  if (ev.target.id === 'change') { changing = true; pick = 0; if (classes.length > 1) pickC = ''; render(); return; }
   if (ev.target.id === 'save') {
-    myNum = pick; changing = false; try { localStorage.setItem(KEY, String(myNum)); } catch (e) {}
+    myC = pickC; myNum = pick; changing = false; saveMine();
     pick = 0; render(); return;
   }
   if (ev.target.id === 'here') {
     const s = slots().find(isOpen);
     if (!s) return render();
-    const n = (myNum && !changing) ? myNum : pick;
-    if (!n) return;
+    const useMine = myNum && !changing;
+    const n = useMine ? myNum : pick, c = useMine ? myC : pickC;
+    if (!n || !c) return;
     busy = true; ev.target.disabled = true; ev.target.textContent = '보내는 중...';
     try {
-      await S.addMark(eid, s.id, n, 'student', uid);
-      myNum = n; changing = false; pick = 0;
-      try { localStorage.setItem(KEY, String(n)); } catch (e) {}
-      marks = marks.concat([{ slot: s.id, n, src: 'student' }]);
+      await S.addMark(eid, s.id, c, n, 'student', uid);
+      myC = c; myNum = n; changing = false; pick = 0; saveMine();
+      marks = marks.concat([{ slot: s.id, c, n, src: 'student' }]);
       busy = false; render();
     } catch (e) {
       busy = false;
       console.error(e);
       const msg = String(e.message);
       if (msg.includes('already')) {
-        if (n === myNum) { marks = marks.concat([{ slot: s.id, n }]); render(); return; }
+        if (useMine) { marks = marks.concat([{ slot: s.id, c, n }]); render(); return; }
         render(); document.getElementById('err').textContent = '그 번호는 이미 확인됐어요. 내 번호가 맞다면 선생님께 말씀드려요.';
       } else if (msg.includes('closed')) {
         render(); const el = document.getElementById('err'); if (el) el.textContent = '지금은 점검 시간이 아니에요. 휴대폰 시계가 맞는지도 확인해 주세요.';
