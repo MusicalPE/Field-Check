@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#3D6B35">
+<meta name="description" content="체험학습 사전 안내 자료와 결과 보고서">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="체험첵! Field-Check!">
+<meta property="og:title" content="체험첵! 문서 만들기">
+<meta property="og:description" content="체험학습 사전 안내 자료와 결과 보고서">
+<meta property="og:url" content="https://musicalpe.github.io/Field-Check/docs.html">
+<meta property="og:image" content="https://musicalpe.github.io/Field-Check/og-image.png?v=2">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<title>체험첵! 문서 만들기</title>
+<link rel="icon" href="favicon-32.png">
+<script>
+/* 카카오톡 안 브라우저는 구글 로그인이 막히고 저장이 불안정해서, 휴대폰 기본 브라우저로 넘김 */
+(function(){
+  if (!/KAKAOTALK/i.test(navigator.userAgent)) return;
+  try{ if (sessionStorage.getItem("kakao-out")) return; sessionStorage.setItem("kakao-out", "1"); }catch(e){}
+  window.__kakaoOut = true;
+  location.href = "kakaotalk://web/openExternal?url=" + encodeURIComponent(location.href);
+})();
+</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=Nanum+Gothic:wght@400;700;800&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+  :root{--ink:#232C22;--sub:#5F6E5B;--line:#DCE6D4;--soft:#F4F7F0;--pri:#3D6B35;--pri-soft:#E8F0E2;--on-pri:#fff;--brown:#A8693A;--acc:#D9A23A;--hi:#4E8A3E;--mid:#E0B246;--lo:#B9C2B5;--warn:#C94A35;--warn-soft:#FBE7E3;
+    --f-display:"Do Hyeon","Noto Sans KR",sans-serif;--f-body:"Nanum Gothic","Apple SD Gothic Neo","Malgun Gothic",sans-serif;--f-mono:"IBM Plex Mono",ui-monospace,monospace}
+  *{box-sizing:border-box}
+  html{background:#E9EEE5}
+  body{margin:0;color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.6;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .tools{position:sticky;top:0;z-index:5;display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap;padding:12px;background:rgba(233,238,229,.94);backdrop-filter:blur(6px)}
+  .tools button,.tools a{font:inherit;font-weight:800;border-radius:999px;padding:9px 18px;border:1.5px solid var(--line);background:#fff;color:var(--ink);cursor:pointer;text-decoration:none}
+  .tools .pri{background:var(--pri);border-color:var(--pri);color:#fff}
+  .tools .on{background:var(--pri-soft);border-color:var(--pri);color:var(--pri)}
+  .parts{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;padding:0 12px 10px;max-width:900px;margin:0 auto}
+  .parts label{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:800;background:#fff;border:1.5px solid var(--line);border-radius:999px;padding:5px 12px;cursor:pointer}
+  .parts input{accent-color:var(--pri);margin:0}
+  .page{width:210mm;max-width:100%;margin:0 auto 24px;background:#fff;padding:16mm 15mm;box-shadow:0 6px 24px rgba(0,0,0,.08)}
+  .eyebrow{color:var(--brown);font-weight:800;font-size:13px}
+  h1{font-family:var(--f-display);font-weight:400;font-size:32px;margin:2px 0 4px;line-height:1.2}
+  .meta{color:var(--sub);font-size:12.5px}
+  h2{font-size:16.5px;margin:24px 0 8px;padding-left:10px;border-left:4px solid var(--brown);line-height:1.3}
+  h3{font-size:14px;margin:14px 0 6px}
+  table{width:100%;border-collapse:collapse}
+  th,td{border:1px solid #CAD6C2;padding:7px 9px;vertical-align:top;text-align:left;word-break:keep-all}
+  th{background:var(--soft);font-weight:800;white-space:nowrap;width:1%}
+  table.list th{width:auto}
+  td.c,th.c{text-align:center}
+  td.n{text-align:right;white-space:nowrap;font-family:var(--f-mono)}
+  .ok{color:var(--hi);font-weight:800}.no{color:var(--warn);font-weight:800}
+  ul{margin:4px 0;padding-left:20px}
+  li{margin:3px 0;word-break:keep-all}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px 18px;align-items:start}
+  .box{border:1.5px solid var(--line);border-radius:12px;padding:10px 14px}
+  .box h3{margin:0 0 4px;color:var(--pri)}
+  .must{color:var(--warn);font-weight:800}
+  .x{color:var(--sub);text-decoration:line-through}
+  .qrs{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  .qr{border:1.5px dashed var(--line);border-radius:12px;padding:10px;text-align:center;break-inside:avoid}
+  .qr .img{display:grid;place-items:center;min-height:110px}
+  .qr .img img,.qr .img canvas{width:110px!important;height:110px!important}
+  .qr b{display:block;font-size:13px;margin-top:6px;word-break:keep-all}
+  .qr span{font-size:11.5px;color:var(--sub);word-break:keep-all}
+  .note{width:100%;min-height:80px;border:1.5px dashed var(--line);border-radius:10px;padding:10px 12px;font:inherit;color:var(--ink);resize:vertical;background:#FCFDFB}
+  .note-print{white-space:pre-wrap;display:none}
+  .saved{font-size:12px;color:var(--sub);margin-left:6px}
+  .hint{font-size:12px;color:var(--sub);margin:4px 0}
+  .draft{font:inherit;font-size:12.5px;font-weight:800;border:1.5px solid var(--pri);color:var(--pri);background:#fff;border-radius:999px;padding:4px 12px;cursor:pointer;margin-left:6px}
+  .bar{display:inline-block;width:90px;height:8px;border-radius:4px;background:#EEF1EB;vertical-align:middle;margin-left:6px;overflow:hidden}
+  .bar i{display:block;height:100%;background:var(--hi)}
+  .foot{color:var(--sub);font-size:11.5px;margin-top:22px;border-top:1px solid var(--line);padding-top:8px}
+  .avoid{break-inside:avoid}
+  .msg{max-width:520px;margin:60px auto;background:#fff;border-radius:20px;padding:30px;text-align:center}
+  .hide{display:none!important}
+  /* 날씨 표가 쓰는 색 */
+  .wxwrap{--card:#fff;--soft:#F4F7F0}
+  @media (max-width:760px){.page{padding:18px 14px}.grid2{grid-template-columns:1fr}.qrs{grid-template-columns:repeat(2,1fr)}}
+  @page{size:A4;margin:12mm}
+  @media print{
+    html{background:#fff}
+    .tools,.parts{display:none}
+    .page{width:auto;margin:0;padding:0;box-shadow:none}
+    .note,.saved,.draft,.hint.screen{display:none}.note-print{display:block}.note-empty{display:none}
+    tr,.box,.qr{break-inside:avoid}
+    h2{break-after:avoid}
+    .wx-hint{display:none}
+  }
+</style>
+</head>
+<body>
+<div class="tools"><a href="./" id="back">← 체험첵!</a>
+  <button id="t-guide">사전 안내 자료</button><button id="t-report">결과 보고서</button>
+  <button class="pri" id="print">인쇄 · PDF로 저장</button></div>
+<div class="parts" id="parts"></div>
+<div id="app"><div class="msg">자료를 불러오는 중이에요...</div></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="config.js?v=1.2.0"></script>
+<script src="store.js?v=1.2.0"></script>
+<script src="wx.js?v=1.2.0"></script>
+<script>
+const S = window.Store;
+const app = document.getElementById('app');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const P = new URLSearchParams(location.search), eid = P.get('e');
+let kind = P.get('k') === 'report' ? 'report' : 'guide';
+const WK = '일월화수목금토';
+const parseD = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const ymd = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const fmtD = s => { if (!s) return ''; const d = parseD(s); return `${d.getMonth() + 1}월 ${d.getDate()}일(${WK[d.getDay()]})`; };
+const fmtFull = s => { if (!s) return ''; const d = parseD(s); return `${d.getFullYear()}. ${d.getMonth() + 1}. ${d.getDate()}.(${WK[d.getDay()]})`; };
+const addDays = (s, n) => { const d = parseD(s); d.setDate(d.getDate() + n); return d; };
+const PLACES = { home: '집에서 가족과', class: '교실에서', alone: '혼자서', teacher: '선생님 확인' };
+const SITE = new URL('./', location.href).toString();
+const D = {};   // 불러온 자료
+document.getElementById('back').href = './#e=' + encodeURIComponent(eid || '');
+document.getElementById('print').onclick = () => window.print();
+document.getElementById('t-guide').onclick = () => { kind = 'guide'; history.replaceState(null, '', `?e=${encodeURIComponent(eid)}&k=guide`); render(); };
+document.getElementById('t-report').onclick = () => { kind = 'report'; history.replaceState(null, '', `?e=${encodeURIComponent(eid)}&k=report`); render(); };
+function msg(t) { app.innerHTML = `<div class="msg">${t}</div>`; }
+
+function classesOf(e) {
+  if (e && e.classes && Object.keys(e.classes).length) return Object.entries(e.classes).map(([id, c]) => ({ id, ...c })).sort((a, b) => (a.order || 0) - (b.order || 0));
+  return [{ id: 'c1', name: '우리 반', total: 25, order: 0 }];
+}
+function tripDays(e) { const out = [], a = parseD(e.date), b = parseD(e.endDate || e.date); for (let d = new Date(a); d <= b && out.length < 14; d.setDate(d.getDate() + 1)) out.push(ymd(d)); return out; }
+const groupsOf = h => Object.entries(h.groups || {}).map(([id, g]) => ({ id, ...g })).sort((a, b) => (a.order || 0) - (b.order || 0));
+const phaseOf = s => s.phase || 'post';
+function classPlan(s) { if (!s.classDate) return ''; const p = s.classPeriod ? (s.classPeriod === '방과후' ? ' 방과 후' : ` ${s.classPeriod}교시`) : ''; return `${fmtD(s.classDate)}${p} 교실에서 함께 시청`; }
+const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
+
+S.onUser(async u => {
+  if (!u) return msg('선생님 계정으로 로그인한 뒤 다시 열어 주세요.<br><a href="./">체험첵! 열기</a>');
+  try {
+    const evs = await S.listEvents(u.uid);
+    const ev = evs.find(e => e.id === eid);
+    if (!ev) return msg('체험학습을 찾을 수 없어요. 함께하는 선생님만 볼 수 있어요.');
+    D.ev = ev; D.classes = classesOf(ev); D.total = D.classes.reduce((a, c) => a + Number(c.total || 0), 0); D.days = tripDays(ev);
+    const [pub, plist, roll, surveys, sheets, safeties] = await Promise.all([S.getPub(eid), S.getList(eid, 'student'), S.getRoll(eid), S.listSurveys(eid), S.listSheets(eid), S.listSafety(eid)]);
+    Object.assign(D, { pub, plist, roll, surveys: surveys.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0)), sheets: sheets.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0)), safeties });
+    const [resp, ans, views, marks, checks] = await Promise.all([
+      Promise.all(surveys.map(s => S.listResponses(eid, s.id))), Promise.all(sheets.map(h => S.listSheetAnswers(eid, h.id))),
+      Promise.all(safeties.map(s => S.listViews(eid, s.id))), roll ? S.listMarks(eid) : [], plist ? S.countChecks(eid, 'student').catch(() => 0) : 0]);
+    D.resp = {}; surveys.forEach((s, i) => { D.resp[s.id] = resp[i]; });
+    D.ans = {}; sheets.forEach((h, i) => { D.ans[h.id] = ans[i]; });
+    D.views = {}; safeties.forEach((s, i) => { D.views[s.id] = views[i]; });
+    D.marks = marks; D.checks = checks;
+    render();
+    if (pub && pub.place) { try { D.wx = await WX.forecast(pub.place); if (kind === 'guide') render(); } catch (e) {} }
+  } catch (e) { console.error(e); msg('자료를 불러오지 못했어요. 잠시 뒤 다시 열어 주세요.'); }
+});
+
+// ---------- 고칠 수 있는 글칸 (체험학습에 저장, 함께 인쇄) ----------
+function noteBox(key, placeholder, rows = 4) {
+  const v = (D.ev.docNotes || {})[key] || '';
+  return `<textarea class="note" data-note="${key}" rows="${rows}" placeholder="${esc(placeholder)}">${esc(v)}</textarea><span class="saved" data-saved="${key}"></span>
+    <div class="note-print ${v.trim() ? '' : 'note-empty'}" data-np="${key}">${esc(v)}</div>`;
+}
+let noteTimer = null;
+app.addEventListener('input', ev => {
+  const t = ev.target.closest('[data-note]'); if (!t) return;
+  const k = t.dataset.note, np = app.querySelector(`[data-np="${k}"]`), sv = app.querySelector(`[data-saved="${k}"]`);
+  np.textContent = t.value; np.classList.toggle('note-empty', !t.value.trim()); grow(t);
+  D.ev.docNotes = { ...(D.ev.docNotes || {}), [k]: t.value };
+  sv.textContent = '저장 중...'; clearTimeout(noteTimer);
+  noteTimer = setTimeout(async () => {
+    try { await S.updateEvent(eid, { docNotes: D.ev.docNotes, updatedAt: Date.now() }); app.querySelectorAll('[data-saved]').forEach(x => { x.textContent = ''; }); sv.textContent = '저장했어요'; }
+    catch (e) { sv.textContent = '저장하지 못했어요'; }
+  }, 700);
+});
+app.addEventListener('click', ev => {
+  const b = ev.target.closest('[data-draft]'); if (!b) return;
+  const t = app.querySelector(`[data-note="${b.dataset.draft}"]`);
+  const text = DRAFTS[b.dataset.draft] || '';
+  if (t.value.trim() && !confirm('지금 적힌 글 뒤에 초안을 덧붙일까요?')) return;
+  t.value = (t.value.trim() ? t.value.trim() + '\n' : '') + text; t.dispatchEvent(new Event('input', { bubbles: true }));
+});
+
+// ---------- 섹션 켜고 끄기 ----------
+const hidden = { guide: new Set(), report: new Set() };
+function partsBar(list) {
+  document.getElementById('parts').innerHTML = list.map(([k, l]) => `<label><input type="checkbox" data-part="${k}" ${hidden[kind].has(k) ? '' : 'checked'}> ${l}</label>`).join('');
+}
+document.getElementById('parts').addEventListener('change', ev => {
+  const k = ev.target.dataset.part; if (!k) return;
+  if (ev.target.checked) hidden[kind].delete(k); else hidden[kind].add(k);
+  applyParts();
+});
+function applyParts() {
+  app.querySelectorAll('[data-sec]').forEach(s => s.classList.toggle('hide', hidden[kind].has(s.dataset.sec)));
+  let n = 0; app.querySelectorAll('[data-sec]:not(.hide) h2 .no').forEach(x => { x.textContent = ++n + '. '; });
+}
+const sec = (k, title, body) => body ? `<section data-sec="${k}"><h2><span class="no"></span>${title}</h2>${body}</section>` : '';
+
+function plansTable() {
+  const plans = (D.pub && D.pub.plans) || [];
+  if (!plans.length) return '';
+  return D.days.map((d, i) => {
+    const ps = plans.filter(p => p.day === i + 1).sort((a, b) => (a.time || '99') < (b.time || '99') ? -1 : 1);
+    if (!ps.length) return '';
+    return `<div class="avoid"><h3>${D.days.length > 1 ? `${i + 1}일차 · ` : ''}${fmtD(d)}</h3><table class="list"><tr><th class="c" style="width:70px">시간</th><th>일정</th><th>메모</th></tr>
+      ${ps.map(p => `<tr><td class="c">${esc(p.time || '')}</td><td><b>${esc(p.title)}</b></td><td>${esc(p.memo || '')}</td></tr>`).join('')}</table></div>`;
+  }).join('');
+}
+function packHtml() {
+  const L = D.plist; if (!L || !L.items || !L.items.length) return '';
+  const order = [], map = {};
+  L.items.forEach(it => { if (!map[it.cat]) { map[it.cat] = []; order.push(it.cat); } map[it.cat].push(it); });
+  return `<div class="grid2">${order.map(cat => { const its = map[cat], leave = !!its[0].leave;
+    return `<div class="box avoid"><h3>${esc(cat)}</h3><ul>${its.map(i => leave ? `<li class="x">${esc(i.t)}</li>` : `<li>${i.imp ? `<span class="must">${esc(i.t)} (꼭!)</span>` : esc(i.t)}</li>`).join('')}</ul></div>`; }).join('')}</div>
+    <p class="hint">준비물은 QR로 휴대폰에서 하나씩 체크할 수 있어요.</p>`;
+}
+function defaultRules() {
+  const night = D.days.length > 1;
+  return [
+    '버스에서는 안전벨트를 꼭 매고, 달리는 동안 자리에서 일어나지 않아요.',
+    '모둠과 함께 다니고, 정해진 곳 밖으로 혼자 가지 않아요.',
+    '모이는 시간과 장소를 지키고, 인원 점검 때 휴대폰으로 체크해요.',
+    '길을 잃거나 몸이 아프면 그 자리에서 선생님께 바로 연락해요.',
+    '문화재와 전시물은 눈으로 보고, 공공장소에서는 차례와 질서를 지켜요.',
+    ...(night ? ['숙소에서는 비상구 위치를 먼저 확인하고, 밤에는 방 밖으로 나가지 않아요.', '불을 쓰거나 위험한 물건을 가져오지 않아요.'] : []),
+    '알레르기나 먹으면 안 되는 음식은 미리 담임 선생님께 알려 주세요.',
+  ].join('\n');
+}
+function qrItems() {
+  const u = (page, q) => { const x = new URL(page, SITE); x.search = q; return x.toString(); };
+  const out = [];
+  if (D.pub && ((D.pub.plans || []).length || D.pub.place)) out.push(['일정표 · 날씨', '그날 일정과 날씨', u('schedule.html', `?e=${encodeURIComponent(eid)}`)]);
+  if (D.plist) out.push(['준비물 체크', '가방 쌀 때 하나씩', u('packing.html', `?e=${encodeURIComponent(eid)}`)]);
+  D.safeties.filter(s => s.open !== false).forEach(s => out.push([s.title || '안전 교육', '영상 보고 번호 체크', u('safety.html', `?e=${encodeURIComponent(eid)}&s=${encodeURIComponent(s.id)}`)]));
+  D.surveys.filter(s => phaseOf(s) === 'pre' && s.open).forEach(s => out.push([s.title, '출발 전 설문', u('survey.html', `?e=${encodeURIComponent(eid)}&s=${encodeURIComponent(s.id)}`)]));
+  return out;
+}
+function drawQrs() {
+  app.querySelectorAll('.qr .img[data-url]').forEach(el => {
+    el.innerHTML = '';
+    if (window.QRCode) new QRCode(el, { text: el.dataset.url, width: 220, height: 220, correctLevel: QRCode.CorrectLevel.M });
+    else el.textContent = el.dataset.url;
+  });
+}
+
+// ---------- 사전 안내 자료 ----------
+function guide() {
+  const e = D.ev, plans = (D.pub && D.pub.plans) || [];
+  const first = plans.filter(p => p.day === 1 && p.time).sort((a, b) => a.time < b.time ? -1 : 1)[0];
+  const last = plans.filter(p => p.day === D.days.length && p.time).sort((a, b) => a.time < b.time ? 1 : -1)[0];
+  const place = D.pub && D.pub.place;
+  const ov = `<table>
+    <tr><th>기간</th><td>${fmtFull(e.date)}${e.endDate ? ` ~ ${fmtFull(e.endDate)} (${D.days.length - 1}박 ${D.days.length}일)` : ' (하루)'}</td></tr>
+    <tr><th>장소</th><td>${esc(e.place || (place && place.name) || '')}${e.pinfo && e.pinfo.addr ? ` <span class="meta">${esc(e.pinfo.addr)}</span>` : ''}</td></tr>
+    <tr><th>대상</th><td>${esc(e.target || '')}${e.target ? ' · ' : ''}${D.classes.map(c => `${esc(c.name)} ${c.total}명`).join(', ')}</td></tr>
+    ${first ? `<tr><th>모이는 때</th><td>${fmtD(D.days[0])} ${esc(first.time)} · ${esc(first.title)}${first.memo ? ` (${esc(first.memo)})` : ''}</td></tr>` : ''}
+    ${last ? `<tr><th>돌아오는 때</th><td>${fmtD(D.days[D.days.length - 1])} ${esc(last.time)} · ${esc(last.title)}${last.memo ? ` (${esc(last.memo)})` : ''}</td></tr>` : ''}
+  </table>`;
+  const end = parseD(e.endDate || e.date), today = new Date(); today.setHours(0, 0, 0, 0);
+  const wx = place && end >= today ? `<div class="wxwrap">${D.wx ? WX.table(D.days, D.wx) : '<p class="meta">날씨 예보를 불러오는 중이에요…</p>'}</div><p class="hint">예보는 바뀔 수 있어요. 출발 전날 휴대폰 일정표(QR)에서 다시 확인해 주세요.</p>` : '';
+  const safety = D.safeties.length ? `<h3>안전 교육 영상</h3><ul>${D.safeties.map(s => `<li><b>${esc(s.title)}</b> · 영상 ${(s.videos || []).length}개${classPlan(s) ? ` · ${esc(classPlan(s))}` : ''}${s.memo ? ` · ${esc(s.memo)}` : ''}<br><span class="meta">집에서 가족과 함께 QR로 영상을 끝까지 보고, ${D.classes.length > 1 ? '반과 ' : ''}번호를 눌러 주세요.</span></li>`).join('')}</ul>` : '';
+  const rules = `<h3>꼭 지켜요</h3>${noteBox('rules', '안전 수칙을 적어 주세요', 8)}`;
+  const preSh = D.sheets.filter(h => h.phase === 'pre'), daySh = D.sheets.filter(h => h.phase === 'day');
+  const group = (preSh.length || daySh.length) ? `<div class="grid2">${[...preSh, ...daySh].map(h => `<div class="box avoid"><h3>${esc(h.title)} <span class="meta">${h.phase === 'pre' ? '출발 전' : '현장에서'}</span></h3>${h.intro ? `<p class="meta" style="margin:0 0 4px">${esc(h.intro)}</p>` : ''}<ol style="margin:4px 0;padding-left:20px">${h.questions.map(q => `<li>${esc(q.text)}${q.type === 'choice' ? ` <span class="meta">(${q.options.map(esc).join(' / ')})</span>` : ''}</li>`).join('')}</ol></div>`).join('')}</div>
+    <p class="hint">모둠마다 QR이 따로 있어요. 선생님이 모둠별로 나눠 줘요.</p>` : '';
+  const qrs = qrItems();
+  const qrHtml = qrs.length ? `<div class="qrs">${qrs.map(([t, s, url]) => `<div class="qr"><div class="img" data-url="${esc(url)}"></div><b>${esc(t)}</b><span>${esc(s)}</span></div>`).join('')}</div>
+    <p class="hint">휴대폰 카메라로 찍으면 열려요. 학생은 로그인하지 않아요.</p>` : '';
+  return `<div class="page">
+    <div class="eyebrow">${esc(e.target || '')}${e.target ? ' · ' : ''}${esc(e.kind || '현장체험학습')} 사전 안내</div>
+    <h1>${esc(e.title)}</h1>
+    <div class="meta">학생과 가족이 함께 읽어 주세요.</div>
+    ${sec('ov', '언제, 어디로 가요', ov)}
+    ${sec('plan', '일정', plansTable())}
+    ${sec('wx', '날씨', wx)}
+    ${sec('pack', '준비물', packHtml())}
+    ${sec('safe', '안전 수칙과 안전 교육', rules + safety)}
+    ${sec('group', '모둠 활동', group)}
+    ${sec('qr', 'QR 모음', qrHtml)}
+    ${sec('memo', '선생님이 전하는 말', noteBox('guideMemo', '예: 용돈은 2만 원 이내로 가져와요. 급한 일은 담임 선생님께 연락해 주세요.', 4))}
+    <div class="foot">체험첵! Field-Check!에서 만들었어요.</div>
+  </div>`;
+}
+
+// ---------- 결과 보고서 ----------
+let DRAFTS = {};
+function svSummary(s) {
+  const rs = D.resp[s.id] || [], n = rs.length;
+  const vals = q => rs.map(r => (r.answers || {})[q.id]).filter(v => v !== undefined && v !== '');
+  const stars = s.questions.filter(q => q.type === 'star').map(q => { const v = vals(q).map(Number); return { q, c: v.length, avg: v.length ? v.reduce((a, b) => a + b, 0) / v.length : 0, hi: v.filter(x => x >= 4).length }; }).filter(x => x.c);
+  const choices = s.questions.filter(q => q.type === 'choice').map(q => { const v = vals(q); const rows = [...new Set([...q.options, ...v])].map(o => ({ o, c: v.filter(x => x === o).length })).sort((a, b) => b.c - a.c); return { q, total: v.length, rows }; }).filter(x => x.total);
+  const texts = s.questions.filter(q => q.type === 'text').map(q => ({ q, list: vals(q).map(String) })).filter(x => x.list.length);
+  return { n, stars, choices, texts };
+}
+function svTable(s, withQuotes) {
+  const m = svSummary(s);
+  if (!m.n) return `<p class="meta">${esc(s.title)}: 아직 응답이 없어요.</p>`;
+  const rows = [
+    ...m.stars.map(x => `<tr><td>${esc(x.q.text)}</td><td class="n">${x.avg.toFixed(2)}점</td><td>4~5점 ${x.hi}명 (${pct(x.hi, x.c)}%)</td></tr>`),
+    ...m.choices.map(x => `<tr><td>${esc(x.q.text)}</td><td class="n">${x.rows[0].c}명</td><td>1위 "${esc(x.rows[0].o)}" (${pct(x.rows[0].c, x.total)}%)${x.rows[1] && x.rows[1].c ? `, 2위 "${esc(x.rows[1].o)}" ${x.rows[1].c}명` : ''}</td></tr>`),
+  ].join('');
+  const quotes = withQuotes ? m.texts.map(t => { const seen = new Set(), pick = t.list.filter(x => { const k = x.replace(/[\s.!~,]+/g, ''); if (seen.has(k)) return false; seen.add(k); return true; }).slice(0, 4);
+    return `<div class="avoid"><p class="meta" style="margin:8px 0 2px"><b>${esc(t.q.text)}</b> (${t.list.length}명)</p><ul>${pick.map(x => `<li>"${esc(x)}"</li>`).join('')}</ul></div>`; }).join('') : '';
+  return `<h3>${esc(s.title)} <span class="meta">응답 ${m.n}명${D.total ? ` / ${D.total}명 (${pct(m.n, D.total)}%)` : ''}</span></h3>
+    ${rows ? `<table class="list"><tr><th>문항</th><th class="c">결과</th><th>내용</th></tr>${rows}</table>` : ''}${quotes}`;
+}
+function report() {
+  const e = D.ev, names = e.memberNames || {}, ids = e.members && e.members.length ? e.members : [e.owner];
+  const teachers = ids.map(u => names[u]).filter(Boolean);
+  // 1. 개요
+  const ov = `<table>
+    <tr><th>체험학습명</th><td>${esc(e.title)}</td><th>종류</th><td>${esc(e.kind || '')}</td></tr>
+    <tr><th>기간</th><td colspan="3">${fmtFull(e.date)}${e.endDate ? ` ~ ${fmtFull(e.endDate)} (${D.days.length - 1}박 ${D.days.length}일)` : ' (당일)'}</td></tr>
+    <tr><th>장소</th><td colspan="3">${esc(e.place || (D.pub && D.pub.place && D.pub.place.name) || '')}${e.pinfo && e.pinfo.addr ? ` (${esc(e.pinfo.addr)})` : ''}</td></tr>
+    <tr><th>대상</th><td colspan="3">${esc(e.target || '')}${e.target ? ' · ' : ''}${D.classes.map(c => `${esc(c.name)} ${c.total}명`).join(', ')} (모두 ${D.total}명)</td></tr>
+    <tr><th>인솔 교사</th><td colspan="3">${teachers.length ? teachers.map(esc).join(', ') + ` (${teachers.length}명)` : ''}</td></tr>
+  </table>`;
+  // 2. 추진 경과
+  const tasks = [...(e.tasks || [])].sort((a, b) => a.d - b.d), tdone = tasks.filter(t => t.done).length;
+  const prog = tasks.length ? `<table class="list"><tr><th class="c" style="width:110px">예정일</th><th>업무</th><th class="c" style="width:70px">결과</th></tr>
+    ${tasks.map(t => `<tr><td class="c">${fmtD(ymd(addDays(e.date, t.d)))}</td><td>${esc(t.t)}</td><td class="c">${t.done ? '<span class="ok">완료</span>' : '<span class="no">미완료</span>'}</td></tr>`).join('')}</table>
+    <p class="hint">업무 ${tasks.length}개 중 ${tdone}개 완료</p>` : '';
+  // 3. 사전 교육
+  const safe = D.safeties.map(s => {
+    const vs = D.views[s.id] || [], tot = (s.classes ? Object.values(s.classes) : D.classes).reduce((a, c) => a + Number(c.total || 0), 0) || D.total;
+    const by = {}; vs.forEach(v => { by[v.place] = (by[v.place] || 0) + 1; });
+    return `<tr><td><b>${esc(s.title)}</b><br><span class="meta">영상 ${(s.videos || []).length}개 · ${s.requireWatch === false ? '시청 확인 없이' : '90% 이상 시청 확인'}${classPlan(s) ? ` · ${esc(classPlan(s))}` : ''}</span></td>
+      <td class="n">${vs.length}/${tot}명<br>${pct(vs.length, tot)}%</td>
+      <td>${Object.entries(PLACES).filter(([k]) => by[k]).map(([k, l]) => `${l} ${by[k]}명`).join(', ') || '-'}</td></tr>`;
+  }).join('');
+  const preSv = D.surveys.filter(s => phaseOf(s) === 'pre');
+  const preSh = D.sheets.filter(h => h.phase === 'pre');
+  const shRow = h => { const gs = groupsOf(h), got = (D.ans[h.id] || []).filter(a => gs.some(g => g.id === a.id)).length; return `<tr><td>${esc(h.title)}</td><td class="n">${got}/${gs.length}모둠</td><td>질문 ${h.questions.length}개${h.intro ? ` · ${esc(h.intro)}` : ''}</td></tr>`; };
+  const pre = [
+    safe ? `<h3>안전 교육</h3><table class="list"><tr><th>교육</th><th class="c">시청 완료</th><th>시청 장소</th></tr>${safe}</table>` : '',
+    D.plist ? `<h3>준비물 안내</h3><p style="margin:0">학생·가정용 준비물 ${D.plist.items.filter(i => !i.leave).length}가지를 QR로 안내했고, ${D.checks}명이 "다 챙겼어요"를 알렸어요.${(e.teacherItems || []).length ? ` 인솔 교사 준비물 ${e.teacherItems.length}가지 중 ${e.teacherItems.filter(i => i.done).length}가지를 챙겼어요.` : ''}</p>` : '',
+    preSv.length ? `<h3>사전 설문</h3>${preSv.map(s => svTable(s, true)).join('')}` : '',
+    preSh.length ? `<h3>모둠 사전 조사</h3><table class="list"><tr><th>활동지</th><th class="c">제출</th><th>내용</th></tr>${preSh.map(shRow).join('')}</table>` : '',
+  ].join('');
+  // 5. 안전 관리
+  const slots = D.roll ? Object.entries(D.roll.slots || {}).map(([id, s]) => ({ id, ...s })).sort((a, b) => a.openAt - b.openAt) : [];
+  const rtot = D.roll ? Object.values(D.roll.classes || {}).reduce((a, c) => a + Number(c.total || 0), 0) || D.total : D.total;
+  const rows = slots.map(s => { const ms = D.marks.filter(m => m.slot === s.id), st = ms.filter(m => m.src === 'student').length;
+    return `<tr><td class="c">${fmtD(s.date)} ${esc(s.time)}</td><td>${esc(s.label)}</td><td class="n">${ms.length}/${rtot}명</td><td>학생 체크 ${st} · 선생님 확인 ${ms.length - st}</td></tr>`; }).join('');
+  const roll = slots.length ? `<table class="list"><tr><th class="c" style="width:130px">때</th><th>점검</th><th class="c">확인</th><th>방법</th></tr>${rows}</table>
+    <p class="hint">점검 시간 ${D.roll.before}분 전부터 ${D.roll.after}분 뒤까지 학생이 휴대폰으로 체크하고, 선생님이 실시간 번호표로 확인했어요.</p>` : '';
+  const daySh = D.sheets.filter(h => h.phase === 'day');
+  const field = daySh.length ? `<table class="list"><tr><th>활동지</th><th class="c">제출</th><th>내용</th></tr>${daySh.map(shRow).join('')}</table>` : '';
+  const postSv = D.surveys.filter(s => phaseOf(s) === 'post');
+  const post = postSv.length ? postSv.map(s => svTable(s, true)).join('') + `<p class="hint">자세한 결과는 붙임 "사후 설문 결과"를 봐 주세요.</p>` : '';
+  // 초안
+  const g = [], im = [];
+  if (tasks.length) g.push(`출발일을 기준으로 업무 ${tasks.length}가지를 일정에 맞춰 진행했다(${tdone}가지 완료).`);
+  D.safeties.forEach(s => { const vs = (D.views[s.id] || []).length; g.push(`안전 교육 "${s.title}"을(를) 실시하여 학생 ${vs}명(${pct(vs, D.total)}%)이 영상 시청을 마쳤다.`); });
+  const doneSlots = slots.filter(s => D.marks.some(m => m.slot === s.id));
+  if (doneSlots.length) { const all = doneSlots.filter(s => D.marks.filter(m => m.slot === s.id).length >= rtot).length; g.push(`인원 점검 ${doneSlots.length}회를 실시했고, 그중 ${all}회는 학생 휴대폰 체크만으로 전원 확인을 마쳤다.`); }
+  postSv.forEach(s => { const m = svSummary(s); const st = m.stars[0]; if (st) g.push(`사후 설문(응답 ${m.n}명)에서 "${st.q.text}" 평균 ${st.avg.toFixed(2)}점(5점 만점)으로 나타났다.`); const ch = m.choices[0]; if (ch) g.push(`"${ch.q.text}"에 "${ch.rows[0].o}"라는 답이 가장 많았다(${pct(ch.rows[0].c, ch.total)}%).`); });
+  postSv.forEach(s => { const m = svSummary(s); if (m.stars.length > 1) { const w = m.stars.reduce((a, b) => b.avg < a.avg ? b : a); im.push(`"${w.q.text}" 문항이 ${w.avg.toFixed(2)}점으로 가장 낮아 다음 계획에 반영이 필요하다.`); } });
+  D.safeties.forEach(s => { const vs = (D.views[s.id] || []).length; if (vs < D.total) im.push(`안전 교육 영상을 보지 못한 학생 ${D.total - vs}명에 대한 보충 지도가 필요하다.`); });
+  if (tasks.length > tdone) im.push(`완료하지 못한 업무 ${tasks.length - tdone}가지를 점검한다.`);
+  DRAFTS = { good: g.map(x => '- ' + x).join('\n'), improve: im.map(x => '- ' + x).join('\n') };
+  const outcome = `<h3>성과 <button class="draft" data-draft="good">자료로 초안 넣기</button></h3>${noteBox('good', '잘된 점과 성과를 적어 주세요. "자료로 초안 넣기"를 누르면 앱에 쌓인 자료로 문장을 만들어 줘요.', 5)}
+    <h3>개선할 점 <button class="draft" data-draft="improve">자료로 초안 넣기</button></h3>${noteBox('improve', '다음에 바꿀 점을 적어 주세요.', 4)}
+    <h3>기타</h3>${noteBox('etc', '예산 집행, 특이 사항 등 (선택)', 3)}`;
+  const att = [postSv.length ? '사후 설문 결과 1부' : '', D.plist ? '준비물 안내 1부' : '', '사진 자료 1부 (따로 첨부)'].filter(Boolean);
+  return `<div class="page">
+    <div class="eyebrow">${esc(e.kind || '현장체험학습')} 결과 보고</div>
+    <h1>${esc(e.title)} 결과 보고서</h1>
+    <div class="meta">${new Date().toLocaleDateString('ko-KR')} 작성</div>
+    ${sec('r-ov', '개요', ov)}
+    ${sec('r-prog', '추진 경과', prog)}
+    ${sec('r-pre', '사전 교육', pre)}
+    ${sec('r-plan', '운영 일정', plansTable())}
+    ${sec('r-roll', '안전 관리 (인원 점검)', roll)}
+    ${sec('r-field', '현장 활동', field)}
+    ${sec('r-post', '사후 평가', post)}
+    ${sec('r-out', '성과 및 개선할 점', outcome)}
+    ${sec('r-att', '붙임', `<ol style="margin:0;padding-left:20px">${att.map(x => `<li>${x}</li>`).join('')}</ol>`)}
+    <div class="foot">체험첵! Field-Check!에서 정리했어요. 학생 응답은 익명으로 모였고 학생 이름은 들어 있지 않아요.</div>
+  </div>`;
+}
+
+function render() {
+  document.getElementById('t-guide').className = kind === 'guide' ? 'on' : '';
+  document.getElementById('t-report').className = kind === 'report' ? 'on' : '';
+  document.title = `${D.ev.title} ${kind === 'guide' ? '사전 안내 자료' : '결과 보고서'}`;
+  // 안전 수칙 기본값
+  if (!(D.ev.docNotes || {}).rules) D.ev.docNotes = { ...(D.ev.docNotes || {}), rules: defaultRules() };
+  app.innerHTML = kind === 'guide' ? guide() : report();
+  partsBar([...app.querySelectorAll('[data-sec]')].map(s => [s.dataset.sec, s.querySelector('h2').textContent]));
+  applyParts(); drawQrs(); app.querySelectorAll('textarea.note').forEach(grow);
+}
+function grow(t) { t.style.height = 'auto'; t.style.height = Math.max(t.scrollHeight + 4, 70) + 'px'; }
+</script>
+</body>
+</html>

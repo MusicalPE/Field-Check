@@ -281,6 +281,13 @@ label.f{display:block;font-size:13px;font-weight:800;color:var(--sub);margin:12p
 .qrsm{padding:10px!important}
 @media (max-width:640px){.invite{grid-template-columns:1fr}.invite>div:first-child{display:flex;flex-direction:column;align-items:center}}
 .tabbar{display:none}
+.docban{display:flex;align-items:center;gap:16px;padding:16px 20px;margin-bottom:20px;border-color:color-mix(in srgb,var(--pri) 30%,var(--line))}
+.docban .dbi{flex:none;width:46px;height:46px;border-radius:14px;background:var(--pri-soft);color:var(--pri);display:grid;place-items:center}
+.docban .dbi svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.docban .dbt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;word-break:keep-all}
+.docban .dbt b{font-family:var(--f-display);font-weight:400;font-size:20px;color:var(--pri)}
+.docban .dbt span{font-size:13.5px;color:var(--sub)}
+@media (max-width:640px){.docban{flex-wrap:wrap}.docban .btn{width:100%}}
 .pfield{position:relative}
 .pdrop{position:absolute;left:0;right:0;top:100%;margin:6px 0 0;z-index:30;list-style:none;padding:6px;background:var(--card);border:1.5px solid var(--line);border-radius:16px;box-shadow:0 16px 40px rgba(34,48,42,.16);max-height:300px;overflow-y:auto}
 .pdrop li{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:10px;cursor:pointer;word-break:keep-all}
@@ -481,11 +488,11 @@ a.chip{text-decoration:none;display:inline-block}
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="config.js?v=1.1.6"></script>
-<script src="store.js?v=1.1.6"></script>
-<script src="xlsx-export.js?v=1.1.6"></script>
-<script src="wx.js?v=1.1.6"></script>
-<script src="kakao-config.js?v=1.1.6"></script>
+<script src="config.js?v=1.2.0"></script>
+<script src="store.js?v=1.2.0"></script>
+<script src="xlsx-export.js?v=1.2.0"></script>
+<script src="wx.js?v=1.2.0"></script>
+<script src="kakao-config.js?v=1.2.0"></script>
 <script>
 const S = window.Store;
 const $ = s => document.querySelector(s);
@@ -847,7 +854,7 @@ function preTab() {
         <div class="tm">${fmt(due)} · ${dLabel(t.d)} ${taskStatus(t, due)}</div></div>
       <button class="pen" data-act="edit-task" data-id="${t.id}" aria-label="${esc(t.t)} 고치기" title="고치기">${PENCIL}</button></div>`;
   }).join('');
-  return `<div class="cols"><div>
+  return `${docBanner('guide')}<div class="cols"><div>
   <div class="sec">
     <h3>업무 일정표 <span class="badge ok">${done}/${tasks.length}</span></h3>
     <div class="card" style="padding:6px 4px">
@@ -1021,7 +1028,14 @@ function surveySection(phase) {
       : `<div class="card empty" style="padding:28px 20px">${empty}</div>`}
   </div>`;
 }
-function postTab() { return surveySection('post'); }
+function docBanner(k) {
+  const u = `docs.html?e=${encodeURIComponent(cur.id)}&k=${k}`;
+  const [t, d] = k === 'guide' ? ['사전 안내 자료', '일정 · 준비물 · 안전 수칙 · 모둠 활동 · QR을 한 문서로 모아 학생과 가정에 나눠요.']
+    : ['결과 보고서', '개요부터 추진 경과, 사전 교육, 운영 일정, 인원 점검, 사후 평가, 성과와 개선점까지 앱에 쌓인 자료로 정리해요.'];
+  return `<div class="card docban"><div class="dbi">${k === 'guide' ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 12h7M9 16h7"/></svg>' : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 17v-3M12.5 17v-6M16 17v-4"/></svg>'}</div>
+    <div class="dbt"><b>${t}</b><span>${d}</span></div><a class="btn pri sm" href="${u}" target="_blank" rel="noopener">만들기</a></div>`;
+}
+function postTab() { return docBanner('report') + surveySection('post'); }
 
 // ---------- 업무 ----------
 async function saveCur(...keys) {
@@ -1633,8 +1647,13 @@ async function installGo() {
   try { const c = await installEvt.userChoice; if (c && c.outcome === 'accepted') lsSet(IKEY, '1'); } catch (e) {}
   installEvt = null; if (!cur) renderHome();
 }
-const APP_VERSION = '1.1.0';
+const APP_VERSION = '1.2.0';
 const NEWS = [
+  { v: '1.2.0', d: '2026. 10. 28.', items: [
+    '사전 안내 자료: 일정, 준비물, 안전 수칙, 모둠 활동, QR 모음을 한 문서로 (인쇄·PDF)',
+    '결과 보고서: 개요부터 추진 경과, 사전 교육, 운영 일정, 인원 점검, 사후 평가, 성과와 개선점까지 자동 정리 (인쇄·PDF)',
+    '모바일에서 섹션 제목을 누르면 접고 펴기',
+  ] },
   { v: '1.1.0', d: '2026. 10. 28.', items: [
     '자료 공유: 업무, 일정, 준비물, 안전 교육, 설문, 활동지, 인원 점검 시간을 짧은 주소·QR로 다른 선생님께 보내고 불러오기',
     '장소 찾기: 장소 이름을 치면 카카오 장소 검색으로 찾고, 고른 곳으로 날씨 예보가 저절로 맞춰짐',
