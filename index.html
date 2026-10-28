@@ -45,7 +45,9 @@ input,textarea,select{font:inherit;color:var(--ink)}
 :focus-visible{outline:2px solid var(--acc);outline-offset:2px}
 
 /* 머리 */
-.hside{display:flex;flex-direction:column;align-items:flex-end;gap:10px}
+.rowb.hero{align-items:stretch}
+.hero>img,.hero>div:not(.hside){align-self:center}
+.hside{display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between;gap:10px}
 .hwho{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .hd{max-width:1240px;margin:0 auto;padding:16px max(16px,env(safe-area-inset-left,0px)) calc(28px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .logo{display:flex;align-items:center;gap:10px;cursor:pointer;min-width:0}
