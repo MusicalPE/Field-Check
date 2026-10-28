@@ -133,6 +133,16 @@ h2{font-family:var(--f-display);font-weight:400;font-size:28px;margin:0;color:va
 .meter .mnum{font-family:var(--f-mono);font-size:32px;font-weight:500;color:var(--pri);line-height:1.1}
 .meter .cap{font-size:12px;font-weight:800;color:var(--sub);margin-top:2px}
 .evhead .full{grid-column:1/-1}
+.evhead{grid-template-columns:minmax(0,1fr) auto auto}
+.evwx{min-width:0}
+.evwx.pc{max-width:min(440px,38vw);align-self:center}
+.evwx.m{display:none}
+.evwx-h{display:flex;align-items:baseline;gap:8px;margin:0 0 8px 6px;font-size:13px;color:var(--sub)}
+.evwx-h b{font-family:var(--f-display);font-weight:400;font-size:18px;color:var(--pri)}
+.evwx-h a{margin-left:auto;font-weight:800;color:var(--pri);text-decoration:none;font-size:12.5px}
+.evwx .wxempty{background:var(--soft);border:1px dashed var(--line);border-radius:14px;padding:10px 12px}
+.evwx .wx-table td{padding:6px 3px}
+@media (max-width:1000px){.evwx.pc{display:none}.evwx.m{display:block;margin:-4px 0 16px;padding:14px 12px}}
 .count{font-weight:800;font-size:14px;color:var(--pri)}
 .mbar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding-top:12px;border-top:1.5px dashed var(--line)}
 .cfbar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:12px 0 0}
@@ -418,6 +428,8 @@ a.chip{text-decoration:none;display:inline-block}
   .hwho{justify-content:space-between}
   .hero .btn.pri{width:100%}
   .evhead{grid-template-columns:1fr;padding:18px}
+  .evwx.pc{display:none}
+  .evwx.m{display:block;margin:-4px 0 16px;padding:14px 12px}
   .meter{display:flex;align-items:baseline;gap:8px;justify-content:center;padding:8px 14px}
   .meter .mnum{font-size:24px}
   .tab small{display:none}
@@ -787,10 +799,12 @@ function renderEvent() {
       <h2>${esc(e.title)}</h2>
       <div class="meta">${dateRange(e)}${e.place ? ' · ' + esc(e.place) : ''}${e.target ? ' · ' + esc(e.target) : ''} · ${classesOf(e).map(c => `${esc(c.name)} ${c.total}명`).join(', ')}</div>
       </div>
+      ${weatherCard('pc')}
       <div class="mcol"><div class="meter">${meter(e)}</div>
         <button class="btn sm setbtn" data-act="set-modal"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg>설정</button></div>
       <div class="full">${membersCard()}${classFilterBar()}</div>
     </div>
+    ${weatherCard('m')}
     <div class="tabs">${tabs.map(([k, a, b]) => `<button class="tab ${tab === k ? 'on' : ''}" data-act="tab" data-tab="${k}">${a}<small>${b}</small></button>`).join('')}</div>
     <div id="tabc">${tab === 'pre' ? preTab() : tab === 'day' ? dayTab() : tab === 'post' ? postTab() : setTab()}</div>`;
 }
@@ -828,7 +842,6 @@ function preTab() {
   </div>
   ${planSection()}
   </div><div>
-  ${weatherCard()}
   ${safetySection()}
   ${surveySection('pre')}
   ${sheetSection('pre')}
@@ -1439,7 +1452,7 @@ function dayTab() {
   const soon = sheetSection('day');
   if (!roll) return `<div class="cols"><div>${planSection()}<div class="sec"><h3>인원 점검</h3><div class="card svc">
       <div><div class="meta">버스 탑승, 점심 후, 숙소 점호처럼 정해진 시간마다 인원을 확인해요. 학생은 QR로 들어와 ${multiClass() ? '반과 ' : ''}번호를 누르고, 남은 번호는 선생님이 직접 확인해요.${cur.endDate ? ' 날짜마다 기본 점검 시간이 들어가요.' : ''}</div></div>
-      <div class="acts"><button class="btn sm pri" data-act="roll-start">기본 점검 시간으로 시작하기</button></div></div></div></div><div>${weatherCard()}${soon}</div></div>`;
+      <div class="acts"><button class="btn sm pri" data-act="roll-start">기본 점검 시간으로 시작하기</button></div></div></div></div><div>${soon}</div></div>`;
   const days = {}, total = visTotal();
   sortedSlots().forEach(sl => { (days[sl.date] = days[sl.date] || []).push(sl); });
   const all = tripDays();
@@ -1475,7 +1488,7 @@ function dayTab() {
       <div class="acts" style="display:flex;gap:6px"><button class="btn sm pri" data-act="roll-qr">QR·인쇄</button><button class="btn sm" data-act="roll-edit">점검 시간 고치기</button></div></div>
     <div class="meta" style="margin-bottom:8px">${clsFilter === 'all' ? '전체' : esc(clsName(clsFilter))} ${total}명 · 점검 시간 ${roll.before}분 전부터 ${roll.after}분 뒤까지 학생이 체크할 수 있어요. 번호표는 실시간으로 채워져요.</div>
     <div class="card" style="padding:4px 4px 6px">${blocks || '<div class="empty">점검 시간이 없어요</div>'}</div>
-  </div></div><div><div class="sec"><h3>지금</h3>${side}</div>${weatherCard()}${soon}</div></div>`;
+  </div></div><div><div class="sec"><h3>지금</h3>${side}</div>${soon}</div></div>`;
 }
 async function startRoll() {
   roll = buildRoll(defaultSlots(), 10, 30);
@@ -1896,20 +1909,14 @@ document.addEventListener('keydown', ev => {
 document.addEventListener('mousedown', ev => { const li = ev.target.closest && ev.target.closest('#f-plist li[data-pi]'); if (li) { ev.preventDefault(); pickPlace(Number(li.dataset.pi)); } });
 document.addEventListener('focusout', ev => { if (ev.target.id === 'f-place') setTimeout(closePlaces, 150); });
 
-function weatherCard() {
-  const place = pub && pub.place;
-  let body;
-  if (!place) {
-    body = `<div class="wxempty"><div class="meta">체험학습 장소를 고르면 날짜별 날씨 예보가 저절로 나와요.</div>
-      <button class="btn sm" data-act="edit-event">장소 고르기</button></div>`;
-  } else {
-    const end = parseD(cur.endDate || cur.date);
-    body = end < today() ? `<div class="meta">${esc(place.name)} · 지난 체험학습이에요.</div>`
-      : wxData ? WX.table(tripDays(), wxData) : `<div class="meta">${wxErr ? esc(wxErr) : '날씨 예보를 불러오는 중이에요…'}</div>`;
-  }
-  return `<div class="sec" id="wxsec"><div class="rowb"><h3 style="margin:0;font-size:16px">날씨${place ? ` <span class="meta" style="font-family:var(--f-body);font-size:13px">${esc(place.name)}</span>` : ''}</h3>
-    ${place ? `<a class="btn sm" href="${esc(mapUrl(cur.pinfo, place.name))}" target="_blank" rel="noopener">카카오맵</a>` : ''}</div>
-    <div class="card">${body}</div></div>`;
+function weatherCard(where) {
+  const place = pub && pub.place, end = parseD(cur.endDate || cur.date);
+  if (place && end < today()) return `<div class="evwx ${where}" data-wx="${where}" hidden></div>`;
+  const head = `<div class="evwx-h"><b>날씨</b>${place ? `<span>${esc(place.name)}</span><a href="${esc(mapUrl(cur.pinfo, place.name))}" target="_blank" rel="noopener">카카오맵</a>` : ''}</div>`;
+  const body = !place
+    ? `<div class="wxempty"><span class="meta">장소를 고르면 날짜별 날씨 예보가 저절로 나와요.</span><button class="btn sm" data-act="edit-event">장소 고르기</button></div>`
+    : wxData ? WX.table(tripDays(), wxData) : `<div class="meta">${wxErr ? esc(wxErr) : '날씨 예보를 불러오는 중이에요…'}</div>`;
+  return `<div class="evwx ${where}${where === 'm' ? ' card' : ''}" data-wx="${where}">${head}${body}</div>`;
 }
 async function loadWx() {
   const place = pub && pub.place; if (!place) return;
@@ -1917,7 +1924,7 @@ async function loadWx() {
   if (wxFor === key && wxData) return;
   wxFor = key; wxErr = '';
   try { wxData = await WX.forecast(place); } catch (e) { wxData = null; wxErr = '날씨 예보를 불러오지 못했어요. 잠시 뒤 다시 열어 주세요.'; }
-  const el = document.getElementById('wxsec'); if (el) el.outerHTML = weatherCard();
+  document.querySelectorAll('[data-wx]').forEach(el => { el.outerHTML = weatherCard(el.dataset.wx); });
 }
 function rerenderPlan() { renderEvent(); const f = document.querySelector('#tabc [data-focus]'); if (f) f.focus(); }
 function planQR() {
