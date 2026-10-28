@@ -106,6 +106,25 @@ service cloud.firestore {
         }
       }
 
+      // 모둠 활동지: 학생도 읽을 수 있음(질문·모둠 이름만), 고치는 건 선생님만
+      match /sheets/{hid} {
+        allow read: if signedIn();
+        allow write: if isMember(eid);
+
+        // 모둠 답: 모둠마다 하나, 열려 있는 동안 여러 번 고쳐 낼 수 있음
+        match /answers/{gid} {
+          allow read: if signedIn();
+          allow create, update: if signedIn()
+            && request.resource.data.keys().hasOnly(['answers', 'by', 'at'])
+            && request.resource.data.by == request.auth.uid
+            && request.resource.data.answers is map
+            && request.resource.data.answers.size() <= 30
+            && gid in get(/databases/$(database)/documents/events/$(eid)/sheets/$(hid)).data.groups
+            && (isMember(eid) || get(/databases/$(database)/documents/events/$(eid)/sheets/$(hid)).data.open == true);
+          allow delete: if isMember(eid);
+        }
+      }
+
       // 안전 교육: 학생도 읽을 수 있음(영상 주소·안내·반 구성만), 고치는 건 선생님만
       match /safety/{sid} {
         allow read: if signedIn();

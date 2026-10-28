@@ -68,6 +68,12 @@
         for (const m of ms.docs) await m.ref.delete();
         await r.ref.delete();
       }
+      const sh = await evRef(id).collection('sheets').get();
+      for (const h of sh.docs) {
+        const as = await h.ref.collection('answers').get();
+        for (const a of as.docs) await a.ref.delete();
+        await h.ref.delete();
+      }
       const sf = await evRef(id).collection('safety').get();
       for (const s of sf.docs) {
         const vs = await s.ref.collection('views').get();
@@ -110,6 +116,22 @@
     };
     S.removeView = async (eid, sid, c, n) => vwCol(eid, sid).doc(c + '_' + n).delete();
     S.removeViewLegacy = async (eid, sid, docId) => vwCol(eid, sid).doc(docId).delete();
+    // 모둠 활동지
+    const shCol = eid => evRef(eid).collection('sheets');
+    const anCol = (eid, hid) => shCol(eid).doc(hid).collection('answers');
+    S.listSheets = async eid => docs(await shCol(eid).get());
+    S.getSheet = async (eid, hid) => { const d = await shCol(eid).doc(hid).get(); return d.exists ? { id: d.id, ...d.data() } : null; };
+    S.saveSheet = async (eid, h) => { const { id, ...rest } = h; await shCol(eid).doc(id).set(rest); };
+    S.deleteSheet = async (eid, hid) => {
+      const as = await anCol(eid, hid).get();
+      for (const a of as.docs) await a.ref.delete();
+      await shCol(eid).doc(hid).delete();
+    };
+    S.listSheetAnswers = async (eid, hid) => docs(await anCol(eid, hid).get());
+    S.getSheetAnswer = async (eid, hid, gid) => { const d = await anCol(eid, hid).doc(gid).get(); return d.exists ? d.data() : null; };
+    S.saveSheetAnswer = async (eid, hid, gid, answers, by) =>
+      anCol(eid, hid).doc(gid).set({ answers, by, at: firebase.firestore.FieldValue.serverTimestamp() });
+    S.deleteSheetAnswer = async (eid, hid, gid) => anCol(eid, hid).doc(gid).delete();
     // 당일 인원 점검
     const rlDoc = eid => evRef(eid).collection('roll').doc('main');
     const mkCol = eid => rlDoc(eid).collection('marks');
@@ -157,6 +179,7 @@
       d.lists = d.lists || {}; d.checks = d.checks || {};
       d.safety = d.safety || {}; d.views = d.views || {};
       d.roll = d.roll || {}; d.marks = d.marks || {};
+      d.sheets = d.sheets || {}; d.sanswers = d.sanswers || {};
       return d;
     };
     const save = d => localStorage.setItem(KEY, JSON.stringify(d));
@@ -197,7 +220,8 @@
       if (e.memberNames) delete e.memberNames[uid]; save(d);
     };
     S.deleteEvent = async id => {
-      const d = load(); delete d.events[id]; delete d.surveys[id]; delete d.lists[id]; delete d.safety[id]; delete d.roll[id]; delete d.marks[id];
+      const d = load(); delete d.events[id]; delete d.surveys[id]; delete d.lists[id]; delete d.safety[id]; delete d.roll[id]; delete d.marks[id]; delete d.sheets[id];
+      Object.keys(d.sanswers).forEach(k => { if (k.startsWith(id + '|')) delete d.sanswers[k]; });
       Object.keys(d.views).forEach(k => { if (k.startsWith(id + '|')) delete d.views[k]; });
       Object.keys(d.responses).forEach(k => { if (k.startsWith(id + '|')) delete d.responses[k]; });
       Object.keys(d.checks).forEach(k => { if (k.startsWith(id + '|')) delete d.checks[k]; });
@@ -260,6 +284,18 @@
       d.responses[k][uid] = { answers, at: Date.now() };
       save(d);
     };
+    S.listSheets = async eid => Object.entries(load().sheets[eid] || {}).map(([id, h]) => ({ id, ...clone(h) }));
+    S.getSheet = async (eid, hid) => { const h = (load().sheets[eid] || {})[hid]; return h ? { id: hid, ...clone(h) } : null; };
+    S.saveSheet = async (eid, h) => { const d = load(); const { id, ...rest } = h; d.sheets[eid] = d.sheets[eid] || {}; d.sheets[eid][id] = rest; save(d); };
+    S.deleteSheet = async (eid, hid) => { const d = load(); if (d.sheets[eid]) delete d.sheets[eid][hid]; delete d.sanswers[eid + '|' + hid]; save(d); };
+    S.listSheetAnswers = async (eid, hid) => Object.entries(load().sanswers[eid + '|' + hid] || {}).map(([id, a]) => ({ id, ...clone(a) }));
+    S.getSheetAnswer = async (eid, hid, gid) => { const a = (load().sanswers[eid + '|' + hid] || {})[gid]; return a ? clone(a) : null; };
+    S.saveSheetAnswer = async (eid, hid, gid, answers, by) => {
+      const d = load(); const h = (d.sheets[eid] || {})[hid];
+      if (!h || !h.open) throw new Error('closed');
+      const k = eid + '|' + hid; d.sanswers[k] = d.sanswers[k] || {}; d.sanswers[k][gid] = { answers, by, at: Date.now() }; save(d);
+    };
+    S.deleteSheetAnswer = async (eid, hid, gid) => { const d = load(); const k = eid + '|' + hid; if (d.sanswers[k]) delete d.sanswers[k][gid]; save(d); };
     S.getRoll = async eid => { const r = load().roll[eid]; return r ? clone(r) : null; };
     S.saveRoll = async (eid, data) => { const d = load(); d.roll[eid] = data; save(d); };
     S.listMarks = async eid => Object.entries(load().marks[eid] || {}).map(([id, m]) => ({ id, ...clone(m) }));

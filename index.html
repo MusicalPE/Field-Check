@@ -238,6 +238,20 @@ label.f{display:block;font-size:13px;font-weight:800;color:var(--sub);margin:12p
 .qrsm{padding:10px!important}
 @media (max-width:640px){.invite{grid-template-columns:1fr}.invite>div:first-child{display:flex;flex-direction:column;align-items:center}}
 .tabbar{display:none}
+.qrgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-top:14px}
+.qrcard{border:1.5px dashed var(--line);border-radius:16px;padding:12px;text-align:center;background:#fff;color:#232C22;break-inside:avoid}
+.qrcard .qn{font-family:var(--f-display);font-size:24px;color:#3D6B35}
+.qrcard .qrc{display:inline-block;margin:6px 0}
+.qrcard .qrc img,.qrcard .qrc canvas{display:block}
+.qrcard .qt2{font-size:12px;color:#5F6E5B}
+.gwrap{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(320px,100%),1fr));gap:12px;margin-top:14px;align-items:start}
+.gblock{border:1.5px solid var(--line);border-radius:16px;padding:12px 14px;background:var(--soft);break-inside:avoid}
+.gh{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.gh b{font-family:var(--f-display);font-weight:400;font-size:20px;color:var(--pri)}
+.ga{border-top:1px dashed var(--line);padding:6px 0}
+.gq{font-size:12.5px;color:var(--sub);font-weight:700}
+.gv{font-size:14px;word-break:keep-all;overflow-wrap:anywhere}
+@media print{body.printing .qrcard{border-color:#bbb}body.printing .gblock{background:#fff}}
 .mcol{display:flex;flex-direction:column;gap:8px;align-items:stretch}
 .btn.setbtn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:50px;padding:10px 18px;font-size:16px;font-weight:800;border-width:2px;border-color:var(--pri);color:var(--pri)}
 .btn.setbtn.pri{color:var(--on-pri)}
@@ -493,12 +507,13 @@ let user = null, events = [], cur = null, tab = 'pre', surveys = [], rcount = {}
 let plist = null, pcount = 0, ldraft = null;
 let safeties = [], vmap = {};
 let roll = null, marks = [], unwatch = null, unwatchEv = null, cdraft = null;
+let sheets = [], hmap = {};
 const PLACES = { home: '집에서 가족과', class: '교실에서', alone: '혼자서', teacher: '선생님 확인' };
 const PLACE_SHORT = { home: '가정', class: '교실', alone: '혼자', teacher: '확인' };
 
 function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('show'), 1800); }
 function openModal(html, wide) { $('#md').className = 'md' + (wide ? ' wide' : ''); $('#md').innerHTML = '<button class="x noprint" data-act="close">×</button>' + html; $('#ov').classList.add('show'); }
-function closeModal() { $('#ov').classList.remove('show'); $('#md').innerHTML = ''; draft = null; ldraft = null; rdraft = null; cdraft = null; }
+function closeModal() { $('#ov').classList.remove('show'); $('#md').innerHTML = ''; draft = null; ldraft = null; rdraft = null; cdraft = null; hdraft = null; }
 
 // ---------- 시작 ----------
 S.onUser(async u => {
@@ -654,6 +669,10 @@ async function openEvent(id, keepTab) {
   roll = await S.getRoll(id);
   marks = roll ? await S.listMarks(id) : [];
   if (!keepTab) startWatch(); else startMarksWatch();
+  sheets = await S.listSheets(id);
+  sheets.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+  hmap = {};
+  await Promise.all(sheets.map(async h => { hmap[h.id] = await S.listSheetAnswers(id, h.id); }));
   safeties = await S.listSafety(id);
   safeties.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
   vmap = {};
@@ -729,9 +748,8 @@ function preTab() {
   </div><div>
   ${safetySection()}
   ${surveySection('pre')}
-  <div class="sec"><h3>곧 들어올 기능</h3><div class="soon">
-    <div class="card"><b>사전 조사</b><span>모둠 QR로 조사 내용 받기</span></div>
-  </div></div></div></div>
+  ${sheetSection('pre')}
+  </div></div>
   ${packSection()}`;
 }
 
@@ -1335,8 +1353,7 @@ function startMarksWatch() {
 function stopWatch() { if (unwatch) { unwatch(); unwatch = null; } if (unwatchEv) { unwatchEv(); unwatchEv = null; } }
 
 function dayTab() {
-  const soon = `<div class="sec"><h3>곧 들어올 기능</h3><div class="soon">
-    <div class="card"><b>조별 활동지</b><span>모둠 QR로 현장 미션 해결·사진 올리기</span></div></div></div>`;
+  const soon = sheetSection('day');
   if (!roll) return `<div class="sec"><h3>인원 점검</h3><div class="card svc">
       <div><div class="meta">버스 탑승, 점심 후, 숙소 점호처럼 정해진 시간마다 인원을 확인해요. 학생은 QR로 들어와 ${multiClass() ? '반과 ' : ''}번호를 누르고, 남은 번호는 선생님이 직접 확인해요.${cur.endDate ? ' 날짜마다 기본 점검 시간이 들어가요.' : ''}</div></div>
       <div class="acts"><button class="btn sm pri" data-act="roll-start">기본 점검 시간으로 시작하기</button></div></div></div>${soon}`;
@@ -1545,6 +1562,135 @@ function moreMenu() {
   </div>`);
 }
 
+// ---------- 모둠 활동지 (사전 조사 · 현장 미션) ----------
+const SHEET_DEFAULTS = {
+  pre: { title: '모둠 사전 조사', intro: '우리 모둠이 맡은 곳을 미리 조사해요. 모둠원이 함께 의논해서 적어 주세요.', questions: [
+    { type: 'text', text: '우리 모둠이 조사할 곳은 어디인가요?' },
+    { type: 'text', text: '그곳은 어떤 곳인가요? (역사, 특징, 유명한 것)' },
+    { type: 'text', text: '현장에서 꼭 확인하고 싶은 것 3가지를 적어 주세요.' },
+    { type: 'choice', text: '조사할 때 주로 무엇을 찾아봤나요?', options: ['책', '인터넷', '영상', '가족에게 물어보기'] },
+    { type: 'text', text: '조사한 자료의 출처(책 이름, 누리집 주소)를 적어 주세요.' },
+  ] },
+  day: { title: '현장 미션', intro: '모둠이 함께 미션을 해결하고 적어요. 사진은 카톡으로 선생님께 보내요.', questions: [
+    { type: 'text', text: '미션 1. 안내판이나 해설에서 새로 알게 된 사실을 적어 주세요.' },
+    { type: 'text', text: '미션 2. 사전 조사 때 궁금했던 것의 답을 찾았나요? 찾은 답을 적어 주세요.' },
+    { type: 'choice', text: '우리 모둠 미션은 얼마나 해냈나요?', options: ['다 해냈어요', '반쯤 했어요', '조금 했어요'] },
+    { type: 'text', text: '모둠원이 함께 정한 한 줄 소감을 적어 주세요.' },
+  ] },
+};
+const groupsOf = h => Object.entries(h.groups || {}).map(([id, g]) => ({ id, ...g })).sort((a, b) => (a.order || 0) - (b.order || 0));
+function defaultGroups() {
+  const cls = classesOf(cur);
+  if (cls.length === 1) return Array.from({ length: 6 }, (_, i) => `${i + 1}모둠`);
+  return cls.flatMap(c => Array.from({ length: 5 }, (_, i) => `${c.name} ${i + 1}모둠`));
+}
+function sheetSection(phase) {
+  const mine = sheets.filter(h => h.phase === phase);
+  const label = phase === 'pre' ? '모둠 사전 조사' : '현장 미션 활동지';
+  const cards = mine.map(h => {
+    const gs = groupsOf(h), got = (hmap[h.id] || []).length;
+    return `<div class="card svc">
+      <div><span class="badge ${h.open ? 'ok' : 'gray'}">${h.open ? '받는 중' : '마감'}</span> <span class="badge">${got}/${gs.length}모둠 냄</span>
+        <h3 style="margin:8px 0 2px;font-size:16px">${esc(h.title)}</h3>
+        <div class="meta">질문 ${h.questions.length}개 · 모둠마다 QR이 따로 있어요</div></div>
+      <div class="acts">
+        <button class="btn sm pri" data-act="sh-qr" data-id="${h.id}">모둠 QR·인쇄</button>
+        <button class="btn sm" data-act="sh-board" data-id="${h.id}">모둠별 보기</button>
+        <button class="btn sm" data-act="sh-open" data-id="${h.id}">${h.open ? '마감하기' : '다시 열기'}</button>
+        <button class="btn sm" data-act="sh-edit" data-id="${h.id}">고치기</button>
+        <button class="btn sm warn" data-act="sh-del" data-id="${h.id}">지우기</button>
+      </div></div>`;
+  }).join('');
+  const empty = phase === 'pre'
+    ? `<b>아직 사전 조사 활동지가 없어요</b>모둠마다 맡은 곳을 미리 조사해 오게 해요. 모둠 QR로 들어와 함께 적고, 여러 번 고쳐 낼 수 있어요.`
+    : `<b>아직 현장 미션이 없어요</b>현장에서 모둠이 미션을 해결하고 적어요. 사진은 카톡으로 받으면 돼요.`;
+  return `<div class="sec">
+    <div class="rowb"><h3 style="margin:0;font-size:16px">${label}</h3><button class="btn pri sm" data-act="sh-new" data-id="${phase}">+ 새 활동지</button></div>
+    ${cards ? `<div class="grid" style="grid-template-columns:1fr">${cards}</div>` : `<div class="card empty" style="padding:28px 20px">${empty}</div>`}
+  </div>`;
+}
+let hdraft = null;
+function sheetForm(h, phase) {
+  const base = h ? clone(h) : { ...clone(SHEET_DEFAULTS[phase]), phase, _new: true };
+  base.questions.forEach(q => { q.id = q.id || S.newId(); if (q.type === 'choice' && !q.options) q.options = ['', '']; });
+  base.groupText = h ? groupsOf(h).map(g => g.name).join('\n') : defaultGroups().join('\n');
+  hdraft = base; renderSheetForm();
+}
+function renderSheetForm() {
+  const n = hdraft.questions.length;
+  const qs = hdraft.questions.map((q, i) => `
+    <div class="qed">
+      <div class="qh"><b>${i + 1}번</b>
+        <select class="in" data-hi="${i}" data-hf="type"><option value="text" ${q.type === 'text' ? 'selected' : ''}>글로 쓰기</option><option value="choice" ${q.type === 'choice' ? 'selected' : ''}>고르기</option></select>
+        <div class="sp"></div>
+        <button class="ib" data-act="hq-up" data-i="${i}" ${i === 0 ? 'disabled' : ''}>위로</button>
+        <button class="ib" data-act="hq-down" data-i="${i}" ${i === n - 1 ? 'disabled' : ''}>아래로</button>
+        <button class="ib" data-act="hq-del" data-i="${i}">빼기</button></div>
+      <input class="in" data-hi="${i}" data-hf="text" value="${esc(q.text)}" placeholder="질문이나 미션을 적어 주세요">
+      ${q.type === 'choice' ? `<textarea class="in" rows="3" style="margin-top:6px" data-hi="${i}" data-hf="options" placeholder="보기를 한 줄에 하나씩">${esc((q.options || []).join('\n'))}</textarea>` : ''}
+    </div>`).join('');
+  openModal(`<h3>${hdraft._new ? '새 활동지' : '활동지 고치기'}</h3>
+    <label class="f">제목</label><input class="in" data-hd="title" value="${esc(hdraft.title)}">
+    <label class="f">안내 (학생 화면 맨 위에 보여요)</label><textarea class="in" rows="2" data-hd="intro">${esc(hdraft.intro || '')}</textarea>
+    <label class="f">모둠 (한 줄에 하나씩)</label><textarea class="in" rows="4" data-hd="groupText">${esc(hdraft.groupText)}</textarea>
+    <div class="hint">모둠마다 QR이 따로 만들어져요. 이름을 바꾸거나 줄을 더하고 빼면 돼요.</div>
+    <label class="f">질문·미션</label>${qs}
+    <button class="btn sm" data-act="hq-add">+ 질문 더하기</button>
+    <div class="mact"><div class="sp"></div><button class="btn" data-act="close">취소</button><button class="btn pri" data-act="sh-save">${hdraft._new ? '만들기' : '저장'}</button></div>`, true);
+}
+async function saveSheetForm() {
+  const title = (hdraft.title || '').trim();
+  if (!title) return toast('제목을 적어 주세요');
+  const names = [...new Set(String(hdraft.groupText).split('\n').map(x => x.trim()).filter(Boolean))];
+  if (!names.length) return toast('모둠을 하나 이상 적어 주세요');
+  if (names.length > 40) return toast('모둠은 40개까지 만들 수 있어요');
+  if (!hdraft.questions.length) return toast('질문을 하나 이상 넣어 주세요');
+  for (const [i, q] of hdraft.questions.entries()) {
+    q.text = (q.text || '').trim(); if (!q.text) return toast(`${i + 1}번 질문을 적어 주세요`);
+    if (q.type === 'choice') { q.options = [...new Set((q.options || []).map(o => o.trim()).filter(Boolean))]; if (q.options.length < 2) return toast(`${i + 1}번 보기를 두 개 이상 적어 주세요`); }
+    else delete q.options;
+  }
+  const old = hdraft._new ? null : sheets.find(x => x.id === hdraft.id);
+  const oldGroups = old ? groupsOf(old) : [];
+  const groups = {};
+  names.forEach((nm, i) => { const g = oldGroups.find(x => x.name === nm); groups[g ? g.id : 'g' + S.newId()] = { name: nm, order: i }; });
+  const h = { id: hdraft.id || S.newId(), title, intro: (hdraft.intro || '').trim(), phase: hdraft.phase, groups,
+    questions: hdraft.questions.map(q => ({ id: q.id, type: q.type, text: q.text, ...(q.options ? { options: q.options } : {}) })),
+    open: old ? !!old.open : true, owner: old ? old.owner : user.uid, eventTitle: cur.title,
+    createdAt: old ? old.createdAt : Date.now(), updatedAt: Date.now() };
+  await S.saveSheet(cur.id, h); await touch();
+  hdraft = null; closeModal(); await openEvent(cur.id, true); toast(old ? '저장했어요' : '활동지를 만들었어요');
+}
+function sheetUrl(hid, gid) {
+  const u = new URL('sheet.html', location.href);
+  u.hash = ''; u.search = `?e=${encodeURIComponent(cur.id)}&h=${encodeURIComponent(hid)}${gid ? '&g=' + encodeURIComponent(gid) : ''}`;
+  return u.toString();
+}
+function sheetQR(hid) {
+  const h = sheets.find(x => x.id === hid), gs = groupsOf(h);
+  openModal(`<h3 class="noprint">${esc(h.title)} 모둠 QR</h3>
+    <div class="hint noprint">모둠마다 다른 QR이에요. 인쇄해서 잘라 나눠 주거나, 화면에 띄워 모둠별로 찍게 해요. 같은 모둠은 휴대폰 여러 대로 함께 고칠 수 있어요.</div>
+    <div class="qrgrid">${gs.map(g => `<div class="qrcard"><div class="qn">${esc(g.name)}</div><div class="qrc" data-url="${esc(sheetUrl(hid, g.id))}"></div><div class="qt2">${esc(h.title)}</div></div>`).join('')}</div>
+    <div class="mact noprint"><button class="btn" data-act="copy" data-url="${esc(sheetUrl(hid))}">모둠 고르는 주소 복사</button><div class="sp"></div><button class="btn pri" data-act="print">인쇄</button></div>`, true);
+  document.querySelectorAll('.qrc').forEach(el => { if (window.QRCode) new QRCode(el, { text: el.dataset.url, width: 150, height: 150, correctLevel: QRCode.CorrectLevel.M }); });
+}
+const atText = a => { const t = a && a.at && (a.at.toMillis ? a.at.toMillis() : a.at); if (!t) return ''; const d = new Date(t); return `${d.getMonth() + 1}.${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
+async function sheetBoard(hid) {
+  hmap[hid] = await S.listSheetAnswers(cur.id, hid);
+  const h = sheets.find(x => x.id === hid), gs = groupsOf(h), by = Object.fromEntries((hmap[hid] || []).map(a => [a.id, a]));
+  const miss = gs.filter(g => !by[g.id]).map(g => g.name);
+  const blocks = gs.map(g => {
+    const a = by[g.id];
+    return `<div class="gblock"><div class="gh"><b>${esc(g.name)}</b> ${a ? `<span class="badge ok">냄 · ${atText(a)}</span>` : '<span class="badge gray">아직</span>'}
+      ${a ? `<button class="ib noprint" data-act="sh-clear" data-id="${hid}" data-g="${g.id}">지우기</button>` : ''}</div>
+      ${a ? h.questions.map((q, i) => { const v = (a.answers || {})[q.id]; return `<div class="ga"><div class="gq">${i + 1}. ${esc(q.text)}</div><div class="gv">${v ? esc(v).replace(/\n/g, '<br>') : '<span class="meta">비어 있어요</span>'}</div></div>`; }).join('') : ''}</div>`;
+  }).join('');
+  openModal(`<div id="shboard" data-id="${hid}"><h3>${esc(h.title)}</h3>
+    <div class="meta">${esc(cur.title)} · ${gs.length - miss.length}/${gs.length}모둠 냄${miss.length ? ` · 아직: ${miss.map(esc).join(', ')}` : ''}</div>
+    <div class="gwrap">${blocks}</div></div>
+    <div class="mact noprint"><button class="btn" data-act="sh-board" data-id="${hid}">새로고침</button><div class="sp"></div><button class="btn pri" data-act="print">인쇄 · PDF로 저장</button></div>`, true);
+}
+
 // ---------- 이벤트 연결 ----------
 document.addEventListener('click', async ev => {
   const el = ev.target.closest('[data-act]');
@@ -1613,6 +1759,17 @@ document.addEventListener('click', async ev => {
       case 'qr': showQR(id); break;
       case 'pack-start-s': await startStudentList(); break;
       case 'sf-new': safetyForm(); break;
+      case 'sh-new': sheetForm(null, id); break;
+      case 'sh-edit': sheetForm(sheets.find(x => x.id === id)); break;
+      case 'sh-save': await saveSheetForm(); break;
+      case 'sh-qr': sheetQR(id); break;
+      case 'sh-board': await sheetBoard(id); break;
+      case 'sh-clear': if (!confirm('이 모둠이 낸 내용을 지울까요?')) return; await S.deleteSheetAnswer(cur.id, id, el.dataset.g); await sheetBoard(id); renderEvent(); break;
+      case 'sh-open': { const x = sheets.find(y => y.id === id); x.open = !x.open; x.updatedAt = Date.now(); await S.saveSheet(cur.id, x); await touch(); renderEvent(); toast(x.open ? '다시 받기 시작했어요' : '마감했어요'); break; }
+      case 'sh-del': { const x = sheets.find(y => y.id === id); if (!confirm(`'${x.title}'과(와) 모둠이 낸 내용 ${(hmap[id] || []).length}개를 지울까요?`)) return; await S.deleteSheet(cur.id, id); await touch(); await openEvent(cur.id, true); toast('지웠어요'); break; }
+      case 'hq-add': hdraft.questions.push({ id: S.newId(), type: 'text', text: '' }); renderSheetForm(); break;
+      case 'hq-del': hdraft.questions.splice(Number(el.dataset.i), 1); renderSheetForm(); break;
+      case 'hq-up': case 'hq-down': { const i = Number(el.dataset.i), j = act === 'hq-up' ? i - 1 : i + 1; [hdraft.questions[i], hdraft.questions[j]] = [hdraft.questions[j], hdraft.questions[i]]; renderSheetForm(); break; }
       case 'roll-start': await startRoll(); break;
       case 'roll-board': rollBoard(id); break;
       case 'roll-num': await toggleRollNum(id, el.dataset.c, Number(el.dataset.n)); break;
@@ -1701,6 +1858,11 @@ document.addEventListener('submit', async ev => {
 document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && (pq || pdel || zdel)) { pq = null; pdel = null; zdel = null; rerenderPack(); } });
 document.addEventListener('input', ev => {
   const t = ev.target;
+  if (hdraft) {
+    if (t.dataset.hd) hdraft[t.dataset.hd] = t.value;
+    if (t.dataset.hi !== undefined) { const q = hdraft.questions[Number(t.dataset.hi)]; if (t.dataset.hf === 'text') q.text = t.value; if (t.dataset.hf === 'options') q.options = t.value.split('\n'); }
+    if (t.dataset.hf !== 'type') return;
+  }
   if (cdraft && t.dataset.ci !== undefined) { cdraft[Number(t.dataset.ci)][t.dataset.cf] = t.value; return; }
   if (rdraft) {
     if (t.dataset.ri !== undefined) rdraft.slots[Number(t.dataset.ri)][t.dataset.rf] = t.value;
@@ -1726,6 +1888,10 @@ document.addEventListener('input', ev => {
 document.addEventListener('change', ev => {
   const t = ev.target;
   if (t.id === 't-side') { $('#t-due').textContent = fmt(addDays(parseD(cur.date), taskOffset())) + '까지'; return; }
+  if (hdraft && t.dataset.hf === 'type') {
+    const q = hdraft.questions[Number(t.dataset.hi)]; q.type = t.value;
+    if (q.type === 'choice' && !q.options) q.options = ['', '']; renderSheetForm(); return;
+  }
   if (draft && t.dataset.qf === 'type') {
     const q = draft.questions[Number(t.dataset.qi)];
     q.type = t.value;
