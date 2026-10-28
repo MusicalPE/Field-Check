@@ -106,6 +106,12 @@
   .avg{font-size:26px;font-weight:900;color:#8a6100}
   .txl{max-height:260px;overflow:auto;display:flex;flex-direction:column;gap:6px}
   .txl div{background:#f6f7fa;border-radius:10px;padding:8px 11px;font-size:14px}
+  .pg{font-size:12px;font-weight:700;color:var(--sub);padding:10px 12px 2px}
+  .pl{text-align:left;margin-top:16px;border-top:1px solid var(--line);padding-top:12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:4px 16px}
+  .pl-g b{font-size:14px}
+  .pl-g ul{margin:4px 0 10px;padding:0;list-style:none;font-size:14px}
+  .pl-g li{padding:2px 0}
+  .qrbox:fullscreen .pl{display:none}
   .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1c2333;color:#fff;padding:9px 16px;border-radius:999px;font-size:14px;opacity:0;transition:.2s;pointer-events:none;z-index:99}
   .toast.show{opacity:1}
   .login{max-width:420px;margin:60px auto;text-align:center}
@@ -178,6 +184,27 @@ const DEFAULT_SURVEY = {
   ],
 };
 const QTYPES = { star: '별점 (5점)', choice: '고르기', text: '자유롭게 쓰기' };
+// 준비물 기본 목록: [분류, 두고 오는 물건인지, [항목...]]
+const PACK_STUDENT_DAY = [
+  ['꼭 챙겨요', false, ['작은 가방(배낭)', '물병', '손수건·휴지', '필기도구·활동지', '우산 또는 우비', '개인 상비약 (필요한 학생)']],
+  ['있으면 좋아요', false, ['모자', '간식 (약속한 만큼)', '물티슈', '비닐봉투']],
+  ['가져오지 않아요', true, ['비싼 물건', '날카롭거나 위험한 물건', '너무 많은 용돈']],
+];
+const PACK_STUDENT_NIGHT = [
+  ['숙박할 때 챙겨요', false, ['갈아입을 옷', '잠옷', '속옷·양말', '세면도구 (칫솔·치약·수건)', '휴대폰 충전기', '젖은 옷 담을 비닐봉투']],
+];
+const PACK_TEACHER = [
+  ['서류', false, ['학생 명렬표·비상연락망', '인솔 계획서·일정표', '차량·숙소·체험장 연락처', '안전 교육 자료']],
+  ['안전', false, ['구급약품 (밴드·소독약·해열제 등)', '학생 개인 상비약 보관 목록', '호루라기', '모둠 깃발·조끼']],
+  ['기타', false, ['보조배터리', '우비·우산', '쓰레기봉투', '영수증 봉투']],
+];
+const packItems = (groups, withDone) => groups.flatMap(([cat, leave, items]) =>
+  items.map(t => ({ id: S.newId(), cat, t, ...(leave ? { leave: true } : {}), ...(withDone ? { done: false } : {}) })));
+function groupItems(items) {
+  const order = [], map = {};
+  (items || []).forEach(it => { if (!map[it.cat]) { map[it.cat] = []; order.push(it.cat); } map[it.cat].push(it); });
+  return order.map(cat => ({ cat, leave: !!map[cat][0].leave, items: map[cat] }));
+}
 
 // ---------- 날짜 ----------
 const WK = '일월화수목금토';
@@ -203,10 +230,11 @@ function dateRange(ev) {
 
 // ---------- 상태 ----------
 let user = null, events = [], cur = null, tab = 'pre', surveys = [], rcount = {};
+let plist = null, pcount = 0, ldraft = null;
 
 function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('show'), 1800); }
 function openModal(html, wide) { $('#md').className = 'md' + (wide ? ' wide' : ''); $('#md').innerHTML = '<button class="x noprint" data-act="close">×</button>' + html; $('#ov').classList.add('show'); }
-function closeModal() { $('#ov').classList.remove('show'); $('#md').innerHTML = ''; draft = null; }
+function closeModal() { $('#ov').classList.remove('show'); $('#md').innerHTML = ''; draft = null; ldraft = null; }
 
 // ---------- 시작 ----------
 if (S.mode === 'demo') $('#mode').hidden = false;
@@ -289,6 +317,10 @@ async function saveEventForm() {
   if (cur) e = { ...cur, ...base, updatedAt: Date.now() };
   else e = { id: S.newId(), owner: user.uid, ...base, tasks: DEFAULT_TASKS.map(([d, t]) => ({ id: S.newId(), t, d, done: false })), createdAt: Date.now(), updatedAt: Date.now() };
   await S.saveEvent(e);
+  if (!wasNew) {
+    const l = await S.getList(e.id, 'student');
+    if (l) await S.saveList(e.id, 'student', { ...l, eventTitle: e.title, date: e.date, endDate: e.endDate || '' });
+  }
   closeModal();
   await loadEvents();
   openEvent(e.id);
@@ -300,7 +332,10 @@ async function openEvent(id, keepTab) {
   cur = events.find(e => e.id === id);
   if (!keepTab) tab = 'pre';
   history.replaceState(null, '', '#e=' + id);
+  if (!keepTab) { plist = null; pcount = 0; }
   renderEvent();
+  plist = await S.getList(id, 'student');
+  pcount = plist ? await S.countChecks(id, 'student') : 0;
   surveys = await S.listSurveys(id);
   surveys.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
   rcount = {};
@@ -354,11 +389,108 @@ function preTab() {
     </div>
     <div style="margin-top:10px"><button class="btn sm" data-act="add-task">+ 업무 더하기</button></div>
   </div>
+  ${packSection()}
   <div class="sec"><h3>곧 들어올 기능</h3><div class="soon">
-    <div class="card"><b>안전 교육</b><span>교육 자료와 실시 기록 남기기</span></div>
+    <div class="card"><b>안전 교육</b><span>영상 시청 후 번호 체크, 실시 기록 남기기</span></div>
     <div class="card"><b>사전 조사</b><span>모둠 QR로 조사 내용 받기</span></div>
-    <div class="card"><b>준비물 체크리스트</b><span>트립첵 방식으로 학생·가정에서 체크</span></div>
   </div></div>`;
+}
+
+function packSection() {
+  const nItems = plist ? plist.items.filter(i => !i.leave).length : 0;
+  const student = plist
+    ? `<div class="card svc">
+        <div><span class="badge">학생·가정용</span> <span class="badge ok">다 챙겼다고 알린 학생 ${pcount}명</span>
+          <h3 style="margin:8px 0 2px;font-size:16px">학생 준비물</h3>
+          <div class="meta">챙길 것 ${nItems}개 · 학생은 QR로 들어와 자기 휴대폰에서 체크해요</div></div>
+        <div class="acts">
+          <button class="btn sm pri" data-act="pack-qr">QR·인쇄</button>
+          <button class="btn sm" data-act="pack-edit" data-kind="student">목록 고치기</button>
+          <button class="btn sm" data-act="pack-refresh">알린 학생 새로고침</button>
+        </div></div>`
+    : `<div class="card svc"><div><span class="badge">학생·가정용</span>
+          <h3 style="margin:8px 0 2px;font-size:16px">학생 준비물</h3>
+          <div class="meta">기본 목록으로 시작한 뒤 우리 학교에 맞게 고치면 돼요.${cur.endDate ? ' 숙박 준비물도 함께 들어가요.' : ''}</div></div>
+        <div class="acts"><button class="btn sm pri" data-act="pack-start-s">기본 목록으로 시작하기</button></div></div>`;
+  let teacher;
+  if (!cur.teacherItems) {
+    teacher = `<div class="card svc"><div><span class="badge acc">교사용</span>
+        <h3 style="margin:8px 0 2px;font-size:16px">인솔 교사 준비물</h3>
+        <div class="meta">명렬표, 구급약, 호루라기처럼 선생님이 챙길 것을 체크해요.</div></div>
+      <div class="acts"><button class="btn sm pri" data-act="pack-start-t">기본 목록으로 시작하기</button></div></div>`;
+  } else {
+    const all = cur.teacherItems, done = all.filter(i => i.done).length;
+    const groups = groupItems(all).map(g => `
+      <div class="pg">${esc(g.cat)}</div>
+      ${g.items.map(it => `<div class="task ${it.done ? 'done' : ''}" style="padding:8px 12px">
+        <input type="checkbox" ${it.done ? 'checked' : ''} data-act="tcheck" data-id="${it.id}" aria-label="챙김">
+        <div class="tx"><div class="tt">${esc(it.t)}</div></div></div>`).join('')}`).join('');
+    teacher = `<div class="card" style="padding:12px 4px 6px">
+      <div class="rowb" style="padding:0 12px;margin-bottom:4px"><div><span class="badge acc">교사용</span> <b style="margin-left:4px">인솔 교사 준비물</b> <span class="badge ok">${done}/${all.length}</span></div>
+        <button class="btn sm" data-act="pack-edit" data-kind="teacher">목록 고치기</button></div>
+      ${groups}</div>`;
+  }
+  return `<div class="sec"><h3>준비물 체크리스트</h3><div class="grid" style="grid-template-columns:1fr">${student}${teacher}</div></div>`;
+}
+
+// ---------- 준비물 목록 고치기 ----------
+function listForm(kind) {
+  const items = kind === 'student' ? plist.items : cur.teacherItems;
+  ldraft = { kind, cats: groupItems(items).map(g => ({ name: g.cat, leave: g.leave, text: g.items.map(i => i.t).join('\n') })) };
+  renderListForm();
+}
+function renderListForm() {
+  const isS = ldraft.kind === 'student';
+  const cats = ldraft.cats.map((c, i) => `
+    <div class="qed">
+      <div class="qh"><input class="in" data-lc="${i}" data-lf="name" value="${esc(c.name)}" placeholder="분류 이름" style="flex:1">
+        ${isS ? `<label class="hint" style="margin:0;white-space:nowrap"><input type="checkbox" data-lc="${i}" data-lf="leave" ${c.leave ? 'checked' : ''}> 가져오지 않는 물건</label>` : ''}
+        <button class="ib" data-act="lc-del" data-i="${i}">빼기</button></div>
+      <textarea class="in" rows="5" data-lc="${i}" data-lf="text" placeholder="한 줄에 하나씩">${esc(c.text)}</textarea>
+    </div>`).join('');
+  openModal(`<h3>${isS ? '학생 준비물' : '인솔 교사 준비물'} 고치기</h3>
+    <div class="hint" style="margin-bottom:10px">분류마다 물건을 한 줄에 하나씩 적어요.${isS ? ' "가져오지 않는 물건"에 체크한 분류는 학생 화면에서 체크 없이 안내만 보여요.' : ''}</div>
+    ${cats}
+    <button class="btn sm" data-act="lc-add">+ 분류 더하기</button>
+    <div class="mact"><div class="sp"></div><button class="btn" data-act="close">취소</button><button class="btn pri" data-act="pack-save">저장</button></div>`, true);
+}
+async function saveListForm() {
+  const isS = ldraft.kind === 'student';
+  const old = isS ? plist.items : cur.teacherItems;
+  const items = [];
+  for (const c of ldraft.cats) {
+    const name = c.name.trim(), lines = [...new Set(c.text.split('\n').map(x => x.trim()).filter(Boolean))];
+    if (!lines.length) continue;
+    if (!name) return toast('분류 이름을 적어 주세요');
+    lines.forEach(t => {
+      const prev = old.find(o => o.cat === name && o.t === t);
+      items.push({ id: prev ? prev.id : S.newId(), cat: name, t, ...(isS && c.leave ? { leave: true } : {}), ...(!isS ? { done: prev ? !!prev.done : false } : {}) });
+    });
+  }
+  if (!items.length) return toast('물건을 하나 이상 적어 주세요');
+  if (isS) {
+    plist = { ...plist, items, updatedAt: Date.now() };
+    await S.saveList(cur.id, 'student', plist);
+  } else {
+    cur.teacherItems = items; await saveCur();
+  }
+  closeModal(); renderEvent(); toast('저장했어요');
+}
+async function startStudentList() {
+  const groups = cur.endDate ? [PACK_STUDENT_DAY[0], ...PACK_STUDENT_NIGHT, ...PACK_STUDENT_DAY.slice(1)] : PACK_STUDENT_DAY;
+  plist = { owner: user.uid, eventTitle: cur.title, date: cur.date, endDate: cur.endDate || '', note: '', items: packItems(groups, false), createdAt: Date.now(), updatedAt: Date.now() };
+  await S.saveList(cur.id, 'student', plist);
+  pcount = 0; renderEvent(); toast('학생 준비물 목록을 만들었어요');
+}
+function packQR() {
+  const u = new URL('packing.html', location.href);
+  u.hash = ''; u.search = `?e=${encodeURIComponent(cur.id)}`;
+  const list = groupItems(plist.items).map(g => `<div class="pl-g"><b>${esc(g.cat)}</b><ul>${g.items.map(i => `<li>${g.leave ? '✕ ' : '□ '}${esc(i.t)}</li>`).join('')}</ul></div>`).join('');
+  qrModal({
+    url: u.toString(), title: `${cur.title} 준비물`,
+    sub: `${dateRange(cur)} · 휴대폰 카메라로 찍으면 체크리스트가 열려요`,
+    extra: `<div class="pl">${list}</div>`,
+  });
 }
 
 function dayTab() {
@@ -471,14 +603,20 @@ function surveyUrl(sid) {
 }
 function showQR(sid) {
   const s = surveys.find(x => x.id === sid);
-  const url = surveyUrl(sid);
+  qrModal({
+    url: surveyUrl(sid), title: s.title, sub: `${cur.title} · 휴대폰 카메라로 찍어 주세요`,
+    note: s.open ? '' : '지금은 마감 상태라 학생이 답할 수 없어요.',
+  });
+}
+function qrModal({ url, title, sub, note, extra }) {
   openModal(`<div class="qrbox" id="qrbox">
-      <div class="qt">${esc(s.title)}</div>
-      <div class="qs">${esc(cur.title)} · 휴대폰 카메라로 찍어 주세요</div>
+      <div class="qt">${esc(title)}</div>
+      <div class="qs">${esc(sub)}</div>
       <div id="qr"></div>
       <div class="url noprint">${esc(url)}</div>
       ${S.mode === 'demo' ? '<div class="note noprint">체험 모드에서는 이 컴퓨터에서만 열려요. 주소를 복사해 새 탭에 붙여 넣으면 학생 화면을 볼 수 있어요.</div>' : ''}
-      ${s.open ? '' : '<div class="note noprint">지금은 마감 상태라 학생이 답할 수 없어요.</div>'}
+      ${note ? `<div class="note noprint">${esc(note)}</div>` : ''}
+      ${extra || ''}
     </div>
     <div class="mact noprint"><button class="btn" data-act="copy" data-url="${esc(url)}">주소 복사</button>
       <button class="btn" data-act="print">인쇄</button><div class="sp"></div>
@@ -585,6 +723,15 @@ document.addEventListener('click', async ev => {
         await S.deleteSurvey(cur.id, id); await openEvent(cur.id, true); toast('지웠어요'); break;
       }
       case 'qr': showQR(id); break;
+      case 'pack-start-s': await startStudentList(); break;
+      case 'pack-start-t': cur.teacherItems = packItems(PACK_TEACHER, true); renderEvent(); await saveCur(); toast('교사 준비물 목록을 만들었어요'); break;
+      case 'pack-edit': listForm(el.dataset.kind); break;
+      case 'pack-save': await saveListForm(); break;
+      case 'pack-qr': packQR(); break;
+      case 'pack-refresh': pcount = await S.countChecks(cur.id, 'student'); renderEvent(); toast(`다 챙겼다고 알린 학생 ${pcount}명`); break;
+      case 'tcheck': { const it = cur.teacherItems.find(x => x.id === id); it.done = el.checked; renderEvent(); await saveCur(); break; }
+      case 'lc-add': ldraft.cats.push({ name: '', leave: false, text: '' }); renderListForm(); break;
+      case 'lc-del': ldraft.cats.splice(Number(el.dataset.i), 1); renderListForm(); break;
       case 'copy': await navigator.clipboard.writeText(el.dataset.url); toast('주소를 복사했어요'); break;
       case 'print': document.body.classList.add('printing'); window.print(); document.body.classList.remove('printing'); break;
       case 'full': { const b = $('#qrbox'); if (b.requestFullscreen) b.requestFullscreen(); break; }
@@ -598,6 +745,11 @@ document.addEventListener('click', async ev => {
 
 document.addEventListener('input', ev => {
   const t = ev.target;
+  if (ldraft && t.dataset.lc !== undefined) {
+    const c = ldraft.cats[Number(t.dataset.lc)];
+    if (t.dataset.lf === 'leave') c.leave = t.checked; else c[t.dataset.lf] = t.value;
+    return;
+  }
   if (!draft) {
     if (t.id === 't-n' || t.id === 't-side') $('#t-due').textContent = fmt(addDays(parseD(cur.date), taskOffset())) + '까지';
     return;

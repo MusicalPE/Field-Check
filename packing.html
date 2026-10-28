@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>필드첵! 준비물</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap">
+<style>
+  :root{--bg:#f4f6fb;--card:#fff;--ink:#1c2333;--sub:#6b7487;--line:#e3e7ef;--pri:#2457d6;--pri-soft:#e9efff;--acc:#f5b301;--ok:#1f9d6b;--ok-soft:#e3f6ee;--warn:#d93f45;--warn-soft:#fde8e9}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',system-ui,sans-serif;font-size:17px;line-height:1.55}
+  main{max-width:560px;margin:0 auto;padding:20px 16px 120px}
+  .top{background:var(--pri);color:#fff;border-radius:20px;padding:22px 20px;margin-bottom:16px}
+  .top .ev{font-size:14px;opacity:.85}
+  .top h1{margin:4px 0 8px;font-size:24px;font-weight:900}
+  .top p{margin:0;font-size:14px;opacity:.9}
+  .grp{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:8px 8px 4px;margin-bottom:12px}
+  .grp h2{font-size:15px;margin:8px 10px 6px;color:var(--sub)}
+  .it{display:flex;align-items:center;gap:12px;width:100%;border:0;background:transparent;font:inherit;text-align:left;padding:12px 10px;border-radius:12px;cursor:pointer;color:var(--ink)}
+  .it+.it{border-top:1px solid var(--line)}
+  .box{flex:none;width:28px;height:28px;border:2px solid #c9d0dc;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:900;color:#fff;font-size:17px}
+  .it.on .box{background:var(--ok);border-color:var(--ok)}
+  .it.on span{color:var(--sub);text-decoration:line-through}
+  .leave{background:var(--warn-soft);border-color:#f4c5c7}
+  .leave h2{color:var(--warn)}
+  .leave li{padding:6px 10px;list-style:none}
+  .leave ul{margin:0;padding:0 0 8px}
+  .bottom{position:fixed;left:0;right:0;bottom:0;background:rgba(244,246,251,.96);border-top:1px solid var(--line);padding:12px 16px calc(12px + env(safe-area-inset-bottom))}
+  .bottom .in{max-width:560px;margin:0 auto}
+  .prog{display:flex;justify-content:space-between;font-size:14px;color:var(--sub);margin-bottom:6px}
+  .bar{height:8px;background:#e3e7ef;border-radius:99px;overflow:hidden;margin-bottom:10px}
+  .bar i{display:block;height:100%;background:var(--ok);transition:.2s}
+  .send{width:100%;border:0;background:var(--pri);color:#fff;font:inherit;font-weight:900;font-size:18px;padding:14px;border-radius:14px;cursor:pointer}
+  .send:disabled{background:#b7c3df;cursor:default}
+  .send.sent{background:var(--ok)}
+  .msg{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:40px 22px;text-align:center;margin-top:30px}
+  .msg .big{font-size:52px;line-height:1;margin-bottom:12px;color:var(--pri)}
+  .msg h2{margin:0 0 8px;font-size:22px}
+  .msg p{margin:0;color:var(--sub)}
+</style>
+</head>
+<body>
+<main id="app"><div class="msg"><p>준비물 목록을 불러오는 중이에요...</p></div></main>
+<div class="bottom" id="bottom" hidden><div class="in">
+  <div class="prog"><span id="ptext"></span><span id="ppct"></span></div>
+  <div class="bar"><i id="pbar"></i></div>
+  <button class="send" id="send" disabled>다 챙기면 선생님께 알릴 수 있어요</button>
+</div></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="config.js"></script>
+<script src="store.js"></script>
+<script>
+const S = window.Store;
+const app = document.getElementById('app');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const WK = '일월화수목금토';
+const fmtD = s => { if (!s) return ''; const [y, m, d] = s.split('-').map(Number); const dt = new Date(y, m - 1, d); return `${m}월 ${d}일(${WK[dt.getDay()]})`; };
+const eid = new URLSearchParams(location.search).get('e');
+const KEY = 'fieldcheck-pack-' + eid;
+let uid = null, list = null, checked = {}, sent = false;
+
+function message(big, title, text, code) {
+  document.getElementById('bottom').hidden = true;
+  app.innerHTML = `<div class="msg"><div class="big">${big}</div><h2>${esc(title)}</h2><p>${esc(text)}</p>${code ? `<p style="margin-top:14px;font-size:12px">오류 코드: ${esc(code)}</p>` : ''}</div>`;
+}
+function loadChecks() { try { checked = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { checked = {}; } }
+function saveChecks() { try { localStorage.setItem(KEY, JSON.stringify(checked)); } catch (e) {} }
+
+async function boot() {
+  if (!eid) return message('?', '주소가 올바르지 않아요', '선생님이 보여 준 QR을 다시 찍어 주세요.');
+  let step = '로그인';
+  try {
+    uid = await S.studentLogin();
+    step = '목록 읽기';
+    list = await S.getList(eid, 'student');
+    if (!list) return message('?', '준비물 목록을 찾을 수 없어요', '선생님께 QR을 다시 확인해 달라고 해 주세요.');
+    step = '알림 확인';
+    sent = await S.hasChecked(eid, 'student', uid);
+    loadChecks();
+    render();
+  } catch (e) {
+    console.error(e);
+    message('!', '목록을 열지 못했어요', '인터넷 연결을 확인하고 다시 열어 주세요.', step + ' / ' + (e && (e.code || e.message) || '알 수 없음'));
+  }
+}
+
+function groups() {
+  const order = [], map = {};
+  list.items.forEach(it => { if (!map[it.cat]) { map[it.cat] = []; order.push(it.cat); } map[it.cat].push(it); });
+  return order.map(cat => ({ cat, leave: !!map[cat][0].leave, items: map[cat] }));
+}
+
+function render() {
+  document.title = list.eventTitle + ' 준비물';
+  const when = fmtD(list.date) + (list.endDate ? ' ~ ' + fmtD(list.endDate) : '');
+  const body = groups().map(g => g.leave
+    ? `<section class="grp leave"><h2>${esc(g.cat)}</h2><ul>${g.items.map(i => `<li>✕ ${esc(i.t)}</li>`).join('')}</ul></section>`
+    : `<section class="grp"><h2>${esc(g.cat)}</h2>${g.items.map(i =>
+        `<button type="button" class="it ${checked[i.id] ? 'on' : ''}" data-id="${i.id}"><div class="box">${checked[i.id] ? '✓' : ''}</div><span>${esc(i.t)}</span></button>`).join('')}</section>`
+  ).join('');
+  app.innerHTML = `
+    <div class="top"><div class="ev">${esc(when)}</div><h1>${esc(list.eventTitle)} 준비물</h1>
+      <p>가방에 넣을 때마다 눌러서 체크해요. 부모님과 함께 확인하면 더 좋아요.</p></div>
+    ${body}`;
+  document.getElementById('bottom').hidden = false;
+  updateBottom();
+}
+
+function updateBottom() {
+  const need = list.items.filter(i => !i.leave);
+  const n = need.filter(i => checked[i.id]).length, all = need.length;
+  const pct = all ? Math.round(n / all * 100) : 100;
+  document.getElementById('ptext').textContent = `${n} / ${all} 챙겼어요`;
+  document.getElementById('ppct').textContent = pct + '%';
+  document.getElementById('pbar').style.width = pct + '%';
+  const btn = document.getElementById('send');
+  if (sent) { btn.disabled = true; btn.className = 'send sent'; btn.textContent = '선생님께 "다 챙겼어요"를 알렸어요'; return; }
+  btn.className = 'send';
+  btn.disabled = n < all;
+  btn.textContent = n < all ? `${all - n}개 더 챙기면 선생님께 알릴 수 있어요` : '다 챙겼어요! 선생님께 알리기';
+}
+
+app.addEventListener('click', ev => {
+  const b = ev.target.closest('.it');
+  if (!b) return;
+  const id = b.dataset.id;
+  checked[id] = !checked[id];
+  if (!checked[id]) delete checked[id];
+  saveChecks();
+  b.classList.toggle('on', !!checked[id]);
+  b.querySelector('.box').textContent = checked[id] ? '✓' : '';
+  updateBottom();
+});
+
+document.getElementById('send').addEventListener('click', async () => {
+  const btn = document.getElementById('send');
+  btn.disabled = true; btn.textContent = '보내는 중...';
+  try {
+    await S.submitCheck(eid, 'student', uid);
+    sent = true; updateBottom();
+  } catch (e) {
+    console.error(e);
+    btn.disabled = false; btn.textContent = '보내지 못했어요. 다시 눌러 주세요';
+  }
+});
+
+boot();
+</script>
+</body>
+</html>

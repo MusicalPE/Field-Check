@@ -35,6 +35,21 @@ service cloud.firestore {
           allow delete: if ownsEvent(eid);
         }
       }
+
+      // 준비물 목록: 학생도 읽을 수 있음(목록만 들어 있음), 고치는 건 선생님만
+      match /lists/{lid} {
+        allow read: if signedIn();
+        allow create, update: if ownsEvent(eid) && request.resource.data.owner == request.auth.uid;
+        allow delete: if ownsEvent(eid);
+
+        // "다 챙겼어요" 알림: 기기(익명 계정)마다 하나, 시간만 저장
+        match /checks/{rid} {
+          allow create: if signedIn() && request.auth.uid == rid
+            && request.resource.data.keys().hasOnly(['at']);
+          allow read: if signedIn() && (request.auth.uid == rid || ownsEvent(eid));
+          allow delete: if ownsEvent(eid);
+        }
+      }
     }
   }
 }

@@ -3,6 +3,7 @@
 [들어 있는 파일]
 index.html  - 교사 화면 (체험학습 목록, 사전/당일/사후, 업무 일정표, 설문)
 survey.html - 학생 설문 화면 (QR로 들어오는 곳, 로그인 없음)
+packing.html - 학생 준비물 화면 (QR로 들어와 체크, 로그인 없음)
 store.js    - 저장 담당 (파이어베이스 / 체험 모드)
 config.js   - 파이어베이스 설정을 붙여 넣는 곳
 파이어베이스_규칙.txt - Firestore 규칙에 붙여 넣을 내용
@@ -34,7 +35,7 @@ config.js 를 비워 둔 채로 index.html 을 열면 '체험 모드'로 열립�
 
 
 [4] GitHub에 올리기
-1. 저장소(MusicalPE/Field-Check)에 위 파일 4개(index.html, survey.html, store.js, config.js)를 올립니다.
+1. 저장소(MusicalPE/Field-Check)에 화면 파일(index.html, survey.html, packing.html, store.js, config.js)를 올립니다.
 2. Settings > Pages 에서 main 브랜치로 켭니다.
 3. 주소 https://musicalpe.github.io/Field-Check/ 로 들어가 구글 로그인하면 끝입니다.
 

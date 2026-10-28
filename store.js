@@ -38,8 +38,22 @@
         for (const r of rs.docs) await r.ref.delete();
         await s.ref.delete();
       }
+      const ls = await evRef(id).collection('lists').get();
+      for (const l of ls.docs) {
+        const cs = await l.ref.collection('checks').get();
+        for (const c of cs.docs) await c.ref.delete();
+        await l.ref.delete();
+      }
       await evRef(id).delete();
     };
+    // 준비물 목록 (학생용, QR로 공유)
+    const lsDoc = (eid, lid) => evRef(eid).collection('lists').doc(lid);
+    S.getList = async (eid, lid) => { const d = await lsDoc(eid, lid).get(); return d.exists ? d.data() : null; };
+    S.saveList = async (eid, lid, data) => lsDoc(eid, lid).set(data);
+    S.countChecks = async (eid, lid) => (await lsDoc(eid, lid).collection('checks').get()).size;
+    S.hasChecked = async (eid, lid, uid) => (await lsDoc(eid, lid).collection('checks').doc(uid).get()).exists;
+    S.submitCheck = async (eid, lid, uid) =>
+      lsDoc(eid, lid).collection('checks').doc(uid).set({ at: firebase.firestore.FieldValue.serverTimestamp() });
     S.listSurveys = async eid => docs(await svCol(eid).get());
     S.getSurvey = async (eid, sid) => {
       const d = await svCol(eid).doc(sid).get();
@@ -62,6 +76,7 @@
       let d = {};
       try { d = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) {}
       d.events = d.events || {}; d.surveys = d.surveys || {}; d.responses = d.responses || {};
+      d.lists = d.lists || {}; d.checks = d.checks || {};
       return d;
     };
     const save = d => localStorage.setItem(KEY, JSON.stringify(d));
@@ -80,9 +95,21 @@
       .filter(([, e]) => e.owner === uid).map(([id, e]) => ({ id, ...clone(e) }));
     S.saveEvent = async e => { const d = load(); const { id, ...rest } = e; d.events[id] = rest; save(d); };
     S.deleteEvent = async id => {
-      const d = load(); delete d.events[id]; delete d.surveys[id];
+      const d = load(); delete d.events[id]; delete d.surveys[id]; delete d.lists[id];
       Object.keys(d.responses).forEach(k => { if (k.startsWith(id + '|')) delete d.responses[k]; });
+      Object.keys(d.checks).forEach(k => { if (k.startsWith(id + '|')) delete d.checks[k]; });
       save(d);
+    };
+    S.getList = async (eid, lid) => { const l = (load().lists[eid] || {})[lid]; return l ? clone(l) : null; };
+    S.saveList = async (eid, lid, data) => {
+      const d = load(); d.lists[eid] = d.lists[eid] || {}; d.lists[eid][lid] = data; save(d);
+    };
+    S.countChecks = async (eid, lid) => Object.keys(load().checks[eid + '|' + lid] || {}).length;
+    S.hasChecked = async (eid, lid, uid) => !!(load().checks[eid + '|' + lid] || {})[uid];
+    S.submitCheck = async (eid, lid, uid) => {
+      const d = load(); const k = eid + '|' + lid;
+      if (!(d.lists[eid] || {})[lid]) throw new Error('nolist');
+      d.checks[k] = d.checks[k] || {}; d.checks[k][uid] = { at: Date.now() }; save(d);
     };
     S.listSurveys = async eid => Object.entries(load().surveys[eid] || {}).map(([id, s]) => ({ id, ...clone(s) }));
     S.getSurvey = async (eid, sid) => {
