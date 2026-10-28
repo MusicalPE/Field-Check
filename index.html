@@ -3,7 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>필드첵! Field-Check</title>
+<title>체험첵! Field-Check!</title>
+<link rel="icon" href="favicon-32.png">
+<link rel="apple-touch-icon" href="icon-180.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap">
 <style>
   :root{--bg:#f4f6fb;--card:#fff;--ink:#1c2333;--sub:#6b7487;--line:#e3e7ef;--pri:#2457d6;--pri-soft:#e9efff;--acc:#f5b301;--acc-soft:#fff6db;--ok:#1f9d6b;--ok-soft:#e3f6ee;--warn:#d93f45;--warn-soft:#fde8e9}
@@ -13,6 +15,9 @@
   header{background:var(--pri);color:#fff;position:sticky;top:0;z-index:10}
   .hd{max-width:880px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;gap:10px}
   .logo{font-weight:900;font-size:19px;letter-spacing:-.3px;cursor:pointer}
+  .logo{display:flex;align-items:center;gap:8px}
+  .logo img{width:30px;height:30px}
+  .login-logo{width:220px;max-width:70%;display:block;margin:0 auto 14px;border-radius:24px}
   .logo small{font-weight:500;font-size:12px;opacity:.8;margin-left:4px}
   .mode{font-size:11px;background:var(--acc);color:#3d2c00;border-radius:999px;padding:2px 8px;font-weight:700}
   .sp{flex:1}
@@ -137,7 +142,7 @@
 </head>
 <body>
 <header><div class="hd">
-  <div class="logo" data-act="home">필드첵!<small>Field-Check</small></div>
+  <div class="logo" data-act="home"><img src="icon.svg" alt="">체험첵!<small>Field-Check!</small></div>
   <span class="mode" id="mode" hidden>체험 모드</span>
   <div class="sp"></div>
   <span class="who" id="who"></span>
@@ -259,7 +264,7 @@ S.onUser(async u => {
 
 function renderLogin() {
   $('#main').innerHTML = `<div class="login card">
-    <h1>필드첵! Field-Check</h1>
+    <img src="logo.png" alt="체험첵! Field-Check!" class="login-logo">
     <p>현장체험학습·수학여행 준비부터 사후 설문까지 한곳에서 챙겨요.</p>
     <button class="btn pri" data-act="login">구글 계정으로 시작하기</button>
     <div class="hint" style="margin-top:14px">학생은 로그인 없이 QR로만 참여해요.</div></div>`;
