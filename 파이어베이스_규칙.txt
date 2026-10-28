@@ -1,0 +1,40 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function isTeacher() {
+      return signedIn() && request.auth.token.firebase.sign_in_provider != 'anonymous';
+    }
+    function ownsEvent(eid) {
+      return signedIn() &&
+        get(/databases/$(database)/documents/events/$(eid)).data.owner == request.auth.uid;
+    }
+
+    // 체험학습: 만든 선생님만 보고 고칠 수 있음 (학생 익명 계정은 만들 수 없음)
+    match /events/{eid} {
+      allow read, delete: if signedIn() && resource.data.owner == request.auth.uid;
+      allow create: if isTeacher() && request.resource.data.owner == request.auth.uid;
+      allow update: if signedIn() && resource.data.owner == request.auth.uid
+                    && request.resource.data.owner == resource.data.owner;
+
+      // 설문: 학생도 읽을 수 있음(질문만 들어 있음), 고치는 건 선생님만
+      match /surveys/{sid} {
+        allow read: if signedIn();
+        allow create, update: if ownsEvent(eid) && request.resource.data.owner == request.auth.uid;
+        allow delete: if ownsEvent(eid);
+
+        // 응답: 기기(익명 계정)마다 한 번만, 설문이 열려 있을 때만
+        match /responses/{rid} {
+          allow create: if signedIn() && request.auth.uid == rid
+            && get(/databases/$(database)/documents/events/$(eid)/surveys/$(sid)).data.open == true
+            && request.resource.data.keys().hasOnly(['answers', 'at'])
+            && request.resource.data.answers is map
+            && request.resource.data.answers.size() <= 30;
+          allow read: if signedIn() && (request.auth.uid == rid || ownsEvent(eid));
+          allow delete: if ownsEvent(eid);
+        }
+      }
+    }
+  }
+}

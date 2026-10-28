@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>필드첵! 설문</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap">
+<style>
+  :root{--bg:#f4f6fb;--card:#fff;--ink:#1c2333;--sub:#6b7487;--line:#e3e7ef;--pri:#2457d6;--pri-soft:#e9efff;--acc:#f5b301;--ok:#1f9d6b;--warn:#d93f45}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',system-ui,sans-serif;font-size:17px;line-height:1.55}
+  main{max-width:560px;margin:0 auto;padding:20px 16px 60px}
+  .top{background:var(--pri);color:#fff;border-radius:20px;padding:22px 20px;margin-bottom:16px}
+  .top .ev{font-size:14px;opacity:.85}
+  .top h1{margin:4px 0 8px;font-size:24px;font-weight:900}
+  .top p{margin:0;font-size:14px;opacity:.9}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;margin-bottom:12px}
+  .q.miss{border-color:var(--warn);box-shadow:0 0 0 3px #fde3e4}
+  .q .n{display:inline-block;background:var(--pri-soft);color:var(--pri);font-weight:700;font-size:13px;border-radius:999px;padding:2px 10px;margin-bottom:8px}
+  .q .t{font-weight:700;margin-bottom:12px}
+  .opt-note{font-size:13px;color:var(--sub);font-weight:400}
+  .stars{display:flex;gap:6px;justify-content:space-between}
+  .star{flex:1;aspect-ratio:1;max-width:68px;border:2px solid var(--line);border-radius:16px;background:#fff;font-size:30px;color:#cfd5e0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.12s}
+  .star.on{color:var(--acc);border-color:var(--acc);background:#fff8e1}
+  .star-cap{text-align:center;font-size:14px;color:var(--sub);margin-top:8px;min-height:21px}
+  .choice{display:block;width:100%;text-align:left;border:2px solid var(--line);background:#fff;border-radius:14px;padding:13px 14px;margin-bottom:8px;font:inherit;cursor:pointer}
+  .choice.on{border-color:var(--pri);background:var(--pri-soft);font-weight:700}
+  textarea{width:100%;min-height:96px;border:2px solid var(--line);border-radius:14px;padding:12px;font:inherit;resize:vertical}
+  textarea:focus{outline:none;border-color:var(--pri)}
+  .submit{width:100%;border:0;background:var(--pri);color:#fff;font:inherit;font-weight:900;font-size:19px;padding:16px;border-radius:16px;cursor:pointer;margin-top:6px}
+  .submit:disabled{opacity:.6}
+  .msg{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:40px 22px;text-align:center;margin-top:30px}
+  .msg .big{font-size:52px;line-height:1;margin-bottom:12px;color:var(--pri)}
+  .msg h2{margin:0 0 8px;font-size:22px}
+  .msg p{margin:0;color:var(--sub)}
+  .err{color:var(--warn);text-align:center;font-size:14px;margin-top:10px;min-height:20px}
+</style>
+</head>
+<body>
+<main id="app"><div class="msg"><p>설문을 불러오는 중이에요...</p></div></main>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="config.js"></script>
+<script src="store.js"></script>
+<script>
+const S = window.Store;
+const app = document.getElementById('app');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const STAR_CAP = ['', '별로였어요', '조금 아쉬웠어요', '보통이에요', '좋았어요', '최고였어요'];
+const p = new URLSearchParams(location.search);
+const eid = p.get('e'), sid = p.get('s');
+let uid = null, sv = null, answers = {};
+
+function message(big, title, text) {
+  app.innerHTML = `<div class="msg"><div class="big">${big}</div><h2>${esc(title)}</h2><p>${esc(text)}</p></div>`;
+}
+
+async function boot() {
+  if (!eid || !sid) return message('?', '주소가 올바르지 않아요', '선생님이 보여 준 QR을 다시 찍어 주세요.');
+  try {
+    uid = await S.studentLogin();
+    sv = await S.getSurvey(eid, sid);
+    if (!sv) return message('?', '설문을 찾을 수 없어요', '선생님께 QR을 다시 확인해 달라고 해 주세요.');
+    document.title = sv.title;
+    if (!sv.open) return message('■', '설문이 마감되었어요', '참여해 주어서 고마워요.');
+    if (await S.hasResponded(eid, sid, uid)) return message('✓', '이미 제출했어요', '이 기기에서는 한 번만 낼 수 있어요.');
+    render();
+  } catch (e) {
+    console.error(e);
+    message('!', '설문을 열지 못했어요', '인터넷 연결을 확인하고 다시 열어 주세요.');
+  }
+}
+
+function render() {
+  const qs = sv.questions.map((q, i) => {
+    let body = '';
+    if (q.type === 'star') {
+      const v = answers[q.id] || 0;
+      body = `<div class="stars">${[1,2,3,4,5].map(n =>
+        `<button type="button" class="star ${n <= v ? 'on' : ''}" data-q="${q.id}" data-v="${n}" aria-label="${n}점">★</button>`).join('')}</div>
+        <div class="star-cap">${STAR_CAP[v]}</div>`;
+    } else if (q.type === 'choice') {
+      body = q.options.map(o =>
+        `<button type="button" class="choice ${answers[q.id] === o ? 'on' : ''}" data-q="${q.id}" data-v="${esc(o)}">${esc(o)}</button>`).join('');
+    } else {
+      body = `<textarea data-q="${q.id}" maxlength="500" placeholder="자유롭게 적어 주세요">${esc(answers[q.id] || '')}</textarea>`;
+    }
+    return `<section class="q" id="q-${q.id}"><span class="n">${i + 1}번</span>
+      <div class="t">${esc(q.text)} ${q.type === 'text' ? '<span class="opt-note">(안 적어도 돼요)</span>' : ''}</div>${body}</section>`;
+  }).join('');
+  app.innerHTML = `
+    <div class="top"><div class="ev">${esc(sv.eventTitle || '')}</div><h1>${esc(sv.title)}</h1>
+      <p>이름은 묻지 않아요. 솔직하게 답해 주세요.</p></div>
+    ${qs}
+    <button class="submit" id="submit">제출하기</button>
+    <div class="err" id="err"></div>`;
+}
+
+app.addEventListener('click', async ev => {
+  const b = ev.target.closest('[data-q]');
+  if (b && b.tagName === 'BUTTON') {
+    const q = sv.questions.find(x => x.id === b.dataset.q);
+    answers[q.id] = q.type === 'star' ? Number(b.dataset.v) : b.dataset.v;
+    const y = window.scrollY; render(); window.scrollTo(0, y);
+    return;
+  }
+  if (ev.target.id === 'submit') submit();
+});
+app.addEventListener('input', ev => {
+  if (ev.target.tagName === 'TEXTAREA') answers[ev.target.dataset.q] = ev.target.value;
+});
+
+async function submit() {
+  document.querySelectorAll('.q.miss').forEach(x => x.classList.remove('miss'));
+  const miss = sv.questions.filter(q => q.type !== 'text' && !answers[q.id]);
+  if (miss.length) {
+    miss.forEach(q => document.getElementById('q-' + q.id).classList.add('miss'));
+    document.getElementById('err').textContent = '빨간 칸의 질문에 답해 주세요.';
+    document.getElementById('q-' + miss[0].id).scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+  const btn = document.getElementById('submit');
+  btn.disabled = true; btn.textContent = '보내는 중...';
+  const clean = {};
+  sv.questions.forEach(q => {
+    const v = answers[q.id];
+    if (v !== undefined && v !== '') clean[q.id] = typeof v === 'string' ? v.trim().slice(0, 500) : v;
+  });
+  try {
+    await S.submitResponse(eid, sid, uid, clean);
+    message('✓', '제출했어요, 고마워요!', '선생님이 여러분의 생각을 잘 읽어 볼게요.');
+    window.scrollTo(0, 0);
+  } catch (e) {
+    console.error(e);
+    if (String(e.message).includes('already')) return message('✓', '이미 제출했어요', '이 기기에서는 한 번만 낼 수 있어요.');
+    btn.disabled = false; btn.textContent = '제출하기';
+    document.getElementById('err').textContent = '보내지 못했어요. 설문이 마감되었거나 인터넷이 끊겼을 수 있어요.';
+  }
+}
+
+boot();
+</script>
+</body>
+</html>

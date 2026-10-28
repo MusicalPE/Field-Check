@@ -1,0 +1,625 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>필드첵! Field-Check</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap">
+<style>
+  :root{--bg:#f4f6fb;--card:#fff;--ink:#1c2333;--sub:#6b7487;--line:#e3e7ef;--pri:#2457d6;--pri-soft:#e9efff;--acc:#f5b301;--acc-soft:#fff6db;--ok:#1f9d6b;--ok-soft:#e3f6ee;--warn:#d93f45;--warn-soft:#fde8e9}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',system-ui,sans-serif;font-size:15px;line-height:1.55}
+  button{font:inherit;cursor:pointer}
+  header{background:var(--pri);color:#fff;position:sticky;top:0;z-index:10}
+  .hd{max-width:880px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;gap:10px}
+  .logo{font-weight:900;font-size:19px;letter-spacing:-.3px;cursor:pointer}
+  .logo small{font-weight:500;font-size:12px;opacity:.8;margin-left:4px}
+  .mode{font-size:11px;background:var(--acc);color:#3d2c00;border-radius:999px;padding:2px 8px;font-weight:700}
+  .sp{flex:1}
+  .who{font-size:13px;opacity:.9}
+  .hbtn{background:rgba(255,255,255,.16);border:0;color:#fff;border-radius:8px;padding:5px 10px;font-size:13px}
+  main{max-width:880px;margin:0 auto;padding:18px 16px 80px}
+  h2{font-size:19px;margin:0}
+  .rowb{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+  .btn{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:10px;padding:8px 14px;font-weight:500}
+  .btn.pri{background:var(--pri);border-color:var(--pri);color:#fff;font-weight:700}
+  .btn.warn{color:var(--warn);border-color:#f4c5c7}
+  .btn.sm{padding:5px 10px;font-size:13px}
+  .btn:disabled{opacity:.5}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+  .evc{cursor:pointer;transition:.12s}
+  .evc:hover{border-color:var(--pri);box-shadow:0 4px 14px rgba(36,87,214,.08)}
+  .badge{display:inline-block;font-size:12px;font-weight:700;border-radius:999px;padding:2px 9px;background:var(--pri-soft);color:var(--pri)}
+  .badge.acc{background:var(--acc-soft);color:#8a6100}
+  .badge.ok{background:var(--ok-soft);color:var(--ok)}
+  .badge.warn{background:var(--warn-soft);color:var(--warn)}
+  .badge.gray{background:#eef0f4;color:var(--sub)}
+  .evc h3{margin:8px 0 4px;font-size:17px}
+  .meta{font-size:13px;color:var(--sub)}
+  .bar{height:7px;background:#eef0f4;border-radius:99px;overflow:hidden;margin-top:10px}
+  .bar i{display:block;height:100%;background:var(--ok);border-radius:99px}
+  .empty{text-align:center;padding:46px 20px;color:var(--sub)}
+  .empty b{display:block;color:var(--ink);font-size:17px;margin-bottom:6px}
+  .evhead{margin-bottom:14px}
+  .evhead h2{font-size:22px;margin:6px 0 4px}
+  .count{font-weight:900;font-size:15px;color:var(--pri)}
+  .tabs{display:flex;gap:6px;margin:16px 0 14px;background:#e9ecf3;padding:5px;border-radius:14px}
+  .tab{flex:1;border:0;background:transparent;border-radius:10px;padding:9px 6px;font-weight:700;color:var(--sub)}
+  .tab.on{background:#fff;color:var(--pri);box-shadow:0 1px 4px rgba(0,0,0,.06)}
+  .tab small{display:block;font-weight:500;font-size:11px}
+  .sec{margin-bottom:22px}
+  .sec>h3{font-size:16px;margin:0 0 10px;display:flex;align-items:center;gap:8px}
+  .task{display:flex;align-items:center;gap:12px;padding:11px 12px;border-bottom:1px solid var(--line)}
+  .task:last-child{border-bottom:0}
+  .task input{width:22px;height:22px;accent-color:var(--ok);flex:none;cursor:pointer}
+  .task .tx{flex:1;min-width:0}
+  .task .tt{font-weight:500}
+  .task.done .tt{text-decoration:line-through;color:var(--sub)}
+  .task .tm{font-size:12px;color:var(--sub);display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:2px}
+  .ib{border:0;background:transparent;color:var(--sub);font-size:13px;padding:4px 6px;border-radius:6px}
+  .ib:hover{background:#eef0f4;color:var(--ink)}
+  .list{padding:4px 0}
+  .soon{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+  .soon .card{border-style:dashed;background:transparent;padding:14px}
+  .soon b{display:block;margin-bottom:2px}
+  .soon span{font-size:13px;color:var(--sub)}
+  .svc{display:flex;flex-direction:column;gap:10px}
+  .svc .acts{display:flex;gap:6px;flex-wrap:wrap}
+  /* modal */
+  .ov{position:fixed;inset:0;background:rgba(20,26,40,.45);display:none;align-items:flex-start;justify-content:center;z-index:50;padding:40px 12px;overflow:auto}
+  .ov.show{display:flex}
+  .md{background:#fff;border-radius:18px;width:100%;max-width:560px;padding:20px;position:relative}
+  .md.wide{max-width:720px}
+  .md h3{margin:0 0 14px;font-size:18px}
+  .x{position:absolute;right:12px;top:10px;border:0;background:transparent;font-size:22px;color:var(--sub)}
+  label.f{display:block;font-size:13px;font-weight:700;color:var(--sub);margin:10px 0 4px}
+  .in,select.in,textarea.in{width:100%;border:1px solid var(--line);border-radius:10px;padding:9px 11px;font:inherit;background:#fff;color:var(--ink)}
+  .in:focus{outline:none;border-color:var(--pri);box-shadow:0 0 0 3px var(--pri-soft)}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .mact{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap}
+  .mact .sp{flex:1}
+  .qed{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;background:#fafbfd}
+  .qed .qh{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+  .qed .qh b{font-size:13px;color:var(--pri)}
+  .qed select{width:auto}
+  .hint{font-size:12px;color:var(--sub);margin-top:4px}
+  .note{font-size:13px;background:var(--acc-soft);color:#6b4b00;border-radius:10px;padding:9px 12px;margin-top:10px}
+  /* QR */
+  .qrbox{text-align:center}
+  .qrbox .qt{font-weight:900;font-size:20px;margin-bottom:2px}
+  .qrbox .qs{color:var(--sub);font-size:13px;margin-bottom:14px}
+  #qr{display:inline-block;padding:14px;background:#fff;border:1px solid var(--line);border-radius:14px}
+  #qr img,#qr canvas{display:block}
+  .url{font-size:12px;color:var(--sub);word-break:break-all;margin-top:10px}
+  .qrbox:fullscreen{background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .qrbox:fullscreen .qt{font-size:44px}
+  .qrbox:fullscreen .qs{font-size:22px}
+  .qrbox:fullscreen #qr img,.qrbox:fullscreen #qr canvas{width:min(70vh,80vw)!important;height:auto!important}
+  /* 결과 */
+  .rq{border-top:1px solid var(--line);padding:14px 0}
+  .rq .rt{font-weight:700;margin-bottom:8px}
+  .rrow{display:grid;grid-template-columns:120px 1fr 64px;gap:8px;align-items:center;font-size:13px;margin-bottom:5px}
+  .rrow .rb{height:14px;background:#eef0f4;border-radius:5px;overflow:hidden}
+  .rrow .rb i{display:block;height:100%;background:var(--pri)}
+  .rrow .rn{text-align:right;color:var(--sub)}
+  .avg{font-size:26px;font-weight:900;color:#8a6100}
+  .txl{max-height:260px;overflow:auto;display:flex;flex-direction:column;gap:6px}
+  .txl div{background:#f6f7fa;border-radius:10px;padding:8px 11px;font-size:14px}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1c2333;color:#fff;padding:9px 16px;border-radius:999px;font-size:14px;opacity:0;transition:.2s;pointer-events:none;z-index:99}
+  .toast.show{opacity:1}
+  .login{max-width:420px;margin:60px auto;text-align:center}
+  .login h1{font-size:26px;margin:0 0 6px}
+  .login p{color:var(--sub);margin:0 0 22px}
+  @media (max-width:560px){.two{grid-template-columns:1fr}.rrow{grid-template-columns:90px 1fr 54px}.who{display:none}}
+  @media print{
+    body.printing header,body.printing main,body.printing .toast{display:none!important}
+    body.printing .ov{position:static;background:none;padding:0;display:block}
+    body.printing .md{max-width:none;border:0}
+    body.printing .noprint{display:none!important}
+    body.printing .qrbox .qt{font-size:34px}
+    body.printing #qr{border:0}
+    body.printing #qr img,body.printing #qr canvas{width:420px!important;height:auto!important;margin:0 auto}
+  }
+</style>
+</head>
+<body>
+<header><div class="hd">
+  <div class="logo" data-act="home">필드첵!<small>Field-Check</small></div>
+  <span class="mode" id="mode" hidden>체험 모드</span>
+  <div class="sp"></div>
+  <span class="who" id="who"></span>
+  <button class="hbtn" id="logout" data-act="logout" hidden>로그아웃</button>
+</div></header>
+<main id="main"></main>
+<div class="ov" id="ov"><div class="md" id="md"></div></div>
+<div class="toast" id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="config.js"></script>
+<script src="store.js"></script>
+<script>
+const S = window.Store;
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const clone = o => JSON.parse(JSON.stringify(o));
+
+// ---------- 기본 자료 ----------
+const KINDS = ['현장체험학습', '수학여행', '수련활동', '기타'];
+const DEFAULT_TASKS = [
+  [-60, '체험학습 계획 세우기 (장소·일정·예산)'],
+  [-50, '학교운영위원회 심의·학부모 의견 수렴 (해당 시)'],
+  [-45, '사전 답사 다녀오기'],
+  [-40, '가정통신문·참가 동의서 안내'],
+  [-30, '차량 계약과 안전점검 요청'],
+  [-30, '보험·안전공제 가입 확인'],
+  [-21, '학생 건강 특이사항 확인 (명단은 교사 기기에만)'],
+  [-14, '학생 안전 교육'],
+  [-14, '모둠 편성·사전 조사 안내'],
+  [-7, '준비물 안내'],
+  [-3, '인솔 계획·비상연락망 점검'],
+  [-1, '최종 인원·날씨 확인'],
+  [0, '출발 전 안전 교육·인원 점검'],
+  [3, '사후 설문 받기'],
+  [7, '결과 보고서·정산 정리'],
+];
+const DEFAULT_SURVEY = {
+  title: '체험학습 돌아보기',
+  questions: [
+    { type: 'star', text: '이번 체험학습은 전체적으로 어땠나요?' },
+    { type: 'choice', text: '가장 좋았던 점은 무엇인가요?', options: ['친구들과 함께한 시간', '새로 알게 된 것', '직접 해 본 활동', '먹거리·볼거리'] },
+    { type: 'star', text: '모둠 활동에 얼마나 열심히 참여했나요?' },
+    { type: 'choice', text: '다음에도 이곳에 오고 싶나요?', options: ['꼭 다시 오고 싶어요', '그저 그래요', '다른 곳이 더 좋아요'] },
+    { type: 'text', text: '가장 기억에 남는 장면을 적어 주세요.' },
+    { type: 'text', text: '선생님께 하고 싶은 말이 있다면 적어 주세요.' },
+  ],
+};
+const QTYPES = { star: '별점 (5점)', choice: '고르기', text: '자유롭게 쓰기' };
+
+// ---------- 날짜 ----------
+const WK = '일월화수목금토';
+const today = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; };
+const parseD = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const addDays = (dt, n) => { const d = new Date(dt); d.setDate(d.getDate() + n); return d; };
+const diff = (a, b) => Math.round((a - b) / 86400000);
+const fmt = d => `${d.getMonth() + 1}.${d.getDate()}(${WK[d.getDay()]})`;
+const dLabel = n => n === 0 ? '당일' : (n < 0 ? 'D' + n : 'D+' + n);
+function countdown(ev) {
+  const left = diff(parseD(ev.date), today());
+  const end = ev.endDate ? diff(parseD(ev.endDate), today()) : left;
+  if (left > 0) return `출발 ${left}일 전`;
+  if (left === 0) return '오늘 출발';
+  if (end >= 0) return '체험학습 중';
+  return '다녀왔어요';
+}
+function dateRange(ev) {
+  const a = parseD(ev.date);
+  if (!ev.endDate || ev.endDate === ev.date) return fmt(a);
+  return `${fmt(a)} ~ ${fmt(parseD(ev.endDate))}`;
+}
+
+// ---------- 상태 ----------
+let user = null, events = [], cur = null, tab = 'pre', surveys = [], rcount = {};
+
+function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('show'), 1800); }
+function openModal(html, wide) { $('#md').className = 'md' + (wide ? ' wide' : ''); $('#md').innerHTML = '<button class="x noprint" data-act="close">×</button>' + html; $('#ov').classList.add('show'); }
+function closeModal() { $('#ov').classList.remove('show'); $('#md').innerHTML = ''; draft = null; }
+
+// ---------- 시작 ----------
+if (S.mode === 'demo') $('#mode').hidden = false;
+S.onUser(async u => {
+  user = u;
+  if (!u) { $('#who').textContent = ''; $('#logout').hidden = true; return renderLogin(); }
+  $('#who').textContent = u.displayName || u.email || '';
+  $('#logout').hidden = S.mode === 'demo';
+  await loadEvents();
+  const id = location.hash.match(/^#e=(.+)$/);
+  if (id && events.find(e => e.id === id[1])) openEvent(id[1]); else renderHome();
+});
+
+function renderLogin() {
+  $('#main').innerHTML = `<div class="login card">
+    <h1>필드첵! Field-Check</h1>
+    <p>현장체험학습·수학여행 준비부터 사후 설문까지 한곳에서 챙겨요.</p>
+    <button class="btn pri" data-act="login">구글 계정으로 시작하기</button>
+    <div class="hint" style="margin-top:14px">학생은 로그인 없이 QR로만 참여해요.</div></div>`;
+}
+
+async function loadEvents() {
+  events = await S.listEvents(user.uid);
+  events.sort((a, b) => a.date.localeCompare(b.date));
+}
+
+// ---------- 홈 ----------
+function renderHome() {
+  cur = null; history.replaceState(null, '', location.pathname + location.search);
+  const t = today();
+  const up = events.filter(e => parseD(e.endDate || e.date) >= t);
+  const past = events.filter(e => parseD(e.endDate || e.date) < t).reverse();
+  const card = e => {
+    const done = (e.tasks || []).filter(x => x.done).length, tot = (e.tasks || []).length;
+    const pct = tot ? Math.round(done / tot * 100) : 0;
+    return `<div class="card evc" data-act="open" data-id="${e.id}">
+      <span class="badge">${esc(e.kind)}</span> <span class="badge acc">${countdown(e)}</span>
+      <h3>${esc(e.title)}</h3>
+      <div class="meta">${dateRange(e)}${e.place ? ' · ' + esc(e.place) : ''}${e.target ? ' · ' + esc(e.target) : ''}</div>
+      <div class="bar"><i style="width:${pct}%"></i></div>
+      <div class="meta" style="margin-top:4px">업무 ${done}/${tot} 완료</div></div>`;
+  };
+  $('#main').innerHTML = `
+    <div class="rowb"><h2>나의 체험학습</h2><button class="btn pri" data-act="new-event">+ 새 체험학습</button></div>
+    ${events.length ? '' : `<div class="card empty"><b>아직 만든 체험학습이 없어요</b>위의 '새 체험학습'을 눌러 첫 계획을 만들어 보세요.<br>출발일만 넣으면 준비 일정이 날짜별로 자동으로 정리돼요.</div>`}
+    ${up.length ? `<div class="grid">${up.map(card).join('')}</div>` : ''}
+    ${past.length ? `<h3 style="margin:26px 0 10px;font-size:15px;color:var(--sub)">지난 체험학습</h3><div class="grid">${past.map(card).join('')}</div>` : ''}`;
+}
+
+function eventForm(e) {
+  const isNew = !e;
+  e = e || { title: '', kind: '현장체험학습', date: '', endDate: '', target: '', place: '' };
+  openModal(`<h3>${isNew ? '새 체험학습' : '체험학습 정보 고치기'}</h3>
+    <label class="f">이름</label><input class="in" id="f-title" value="${esc(e.title)}" placeholder="예: 6학년 경주 수학여행">
+    <div class="two">
+      <div><label class="f">종류</label><select class="in" id="f-kind">${KINDS.map(k => `<option ${k === e.kind ? 'selected' : ''}>${k}</option>`).join('')}</select></div>
+      <div><label class="f">대상</label><input class="in" id="f-target" value="${esc(e.target)}" placeholder="예: 5·6학년 24명"></div>
+    </div>
+    <div class="two">
+      <div><label class="f">출발일</label><input class="in" type="date" id="f-date" value="${e.date}"></div>
+      <div><label class="f">돌아오는 날 (하루면 비워 두기)</label><input class="in" type="date" id="f-end" value="${e.endDate || ''}"></div>
+    </div>
+    <label class="f">장소</label><input class="in" id="f-place" value="${esc(e.place)}" placeholder="예: 경주 일대">
+    ${isNew ? '<div class="note">만들면 출발일을 기준으로 기본 업무 일정(15개)이 들어가요. 학교 사정에 맞게 고치고 더하면 돼요.</div>' : ''}
+    <div class="mact">${isNew ? '' : '<button class="btn warn" data-act="del-event">이 체험학습 지우기</button>'}<div class="sp"></div>
+      <button class="btn" data-act="close">취소</button><button class="btn pri" data-act="save-event">${isNew ? '만들기' : '저장'}</button></div>`);
+  $('#f-title').focus();
+}
+
+async function saveEventForm() {
+  const title = $('#f-title').value.trim(), date = $('#f-date').value;
+  let endDate = $('#f-end').value;
+  if (!title) return toast('이름을 적어 주세요');
+  if (!date) return toast('출발일을 골라 주세요');
+  if (endDate && endDate < date) return toast('돌아오는 날이 출발일보다 빨라요');
+  if (endDate === date) endDate = '';
+  const base = { title, date, endDate, kind: $('#f-kind').value, target: $('#f-target').value.trim(), place: $('#f-place').value.trim() };
+  let e;
+  const wasNew = !cur;
+  if (cur) e = { ...cur, ...base, updatedAt: Date.now() };
+  else e = { id: S.newId(), owner: user.uid, ...base, tasks: DEFAULT_TASKS.map(([d, t]) => ({ id: S.newId(), t, d, done: false })), createdAt: Date.now(), updatedAt: Date.now() };
+  await S.saveEvent(e);
+  closeModal();
+  await loadEvents();
+  openEvent(e.id);
+  toast(wasNew ? '만들었어요' : '저장했어요');
+}
+
+// ---------- 체험학습 화면 ----------
+async function openEvent(id, keepTab) {
+  cur = events.find(e => e.id === id);
+  if (!keepTab) tab = 'pre';
+  history.replaceState(null, '', '#e=' + id);
+  renderEvent();
+  surveys = await S.listSurveys(id);
+  surveys.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+  rcount = {};
+  await Promise.all(surveys.map(async s => { rcount[s.id] = (await S.listResponses(id, s.id)).length; }));
+  if (cur && cur.id === id) renderEvent();
+}
+
+function renderEvent() {
+  const e = cur;
+  const tabs = [['pre', '사전', '준비'], ['day', '당일', '현장'], ['post', '사후', '정리']];
+  $('#main').innerHTML = `
+    <div class="rowb"><button class="btn sm" data-act="home">← 목록</button><button class="btn sm" data-act="edit-event">정보 고치기</button></div>
+    <div class="card evhead">
+      <span class="badge">${esc(e.kind)}</span>
+      <h2>${esc(e.title)}</h2>
+      <div class="meta">${dateRange(e)}${e.place ? ' · ' + esc(e.place) : ''}${e.target ? ' · ' + esc(e.target) : ''}</div>
+      <div class="count" style="margin-top:6px">${countdown(e)}</div>
+    </div>
+    <div class="tabs">${tabs.map(([k, a, b]) => `<button class="tab ${tab === k ? 'on' : ''}" data-act="tab" data-tab="${k}">${a}<small>${b}</small></button>`).join('')}</div>
+    <div id="tabc">${tab === 'pre' ? preTab() : tab === 'day' ? dayTab() : postTab()}</div>`;
+}
+
+function taskStatus(task, due) {
+  if (task.done) return '<span class="badge ok">완료</span>';
+  const left = diff(due, today());
+  if (left < 0) return '<span class="badge warn">기한 지남</span>';
+  if (left === 0) return '<span class="badge warn">오늘까지</span>';
+  if (left <= 7) return `<span class="badge acc">${left}일 남음</span>`;
+  return '';
+}
+
+function preTab() {
+  const tasks = [...(cur.tasks || [])].sort((a, b) => a.d - b.d);
+  const done = tasks.filter(t => t.done).length;
+  const pct = tasks.length ? Math.round(done / tasks.length * 100) : 0;
+  const start = parseD(cur.date);
+  const rows = tasks.map(t => {
+    const due = addDays(start, t.d);
+    return `<div class="task ${t.done ? 'done' : ''}">
+      <input type="checkbox" ${t.done ? 'checked' : ''} data-act="toggle" data-id="${t.id}" aria-label="완료">
+      <div class="tx"><div class="tt">${esc(t.t)}</div>
+        <div class="tm">${fmt(due)} · ${dLabel(t.d)} ${taskStatus(t, due)}</div></div>
+      <button class="ib" data-act="edit-task" data-id="${t.id}">고치기</button></div>`;
+  }).join('');
+  return `
+  <div class="sec">
+    <h3>업무 일정표 <span class="badge ok">${done}/${tasks.length}</span></h3>
+    <div class="card" style="padding:6px 4px">
+      <div style="padding:6px 12px 2px"><div class="bar" style="margin:0"><i style="width:${pct}%"></i></div></div>
+      <div class="list">${rows || '<div class="empty">업무가 없어요</div>'}</div>
+    </div>
+    <div style="margin-top:10px"><button class="btn sm" data-act="add-task">+ 업무 더하기</button></div>
+  </div>
+  <div class="sec"><h3>곧 들어올 기능</h3><div class="soon">
+    <div class="card"><b>안전 교육</b><span>교육 자료와 실시 기록 남기기</span></div>
+    <div class="card"><b>사전 조사</b><span>모둠 QR로 조사 내용 받기</span></div>
+    <div class="card"><b>준비물 체크리스트</b><span>트립첵 방식으로 학생·가정에서 체크</span></div>
+  </div></div>`;
+}
+
+function dayTab() {
+  return `<div class="sec"><h3>곧 들어올 기능</h3><div class="soon">
+    <div class="card"><b>인원 점검</b><span>탑승·이동·점호 때 모둠별로 빠르게 확인</span></div>
+    <div class="card"><b>조별 활동지</b><span>모둠 QR로 현장 미션 해결·사진 올리기</span></div>
+  </div></div>`;
+}
+
+function postTab() {
+  const list = surveys.map(s => `
+    <div class="card svc">
+      <div><span class="badge ${s.open ? 'ok' : 'gray'}">${s.open ? '받는 중' : '마감'}</span>
+        <span class="badge">응답 ${rcount[s.id] ?? '…'}명</span>
+        <h3 style="margin:8px 0 2px;font-size:16px">${esc(s.title)}</h3>
+        <div class="meta">질문 ${s.questions.length}개</div></div>
+      <div class="acts">
+        <button class="btn sm pri" data-act="qr" data-id="${s.id}">QR 보여 주기</button>
+        <button class="btn sm" data-act="results" data-id="${s.id}">결과 보기</button>
+        <button class="btn sm" data-act="toggle-open" data-id="${s.id}">${s.open ? '마감하기' : '다시 열기'}</button>
+        <button class="btn sm" data-act="edit-survey" data-id="${s.id}">고치기</button>
+        <button class="btn sm warn" data-act="del-survey" data-id="${s.id}">지우기</button>
+      </div></div>`).join('');
+  return `<div class="sec">
+    <div class="rowb"><h3 style="margin:0;font-size:16px">사후 설문</h3><button class="btn pri sm" data-act="new-survey">+ 새 설문</button></div>
+    ${list ? `<div class="grid" style="grid-template-columns:1fr">${list}</div>`
+      : `<div class="card empty"><b>아직 설문이 없어요</b>'새 설문'을 누르면 기본 질문 6개가 들어간 설문이 준비돼요.<br>학생은 QR만 찍으면 로그인 없이 바로 답할 수 있어요.</div>`}
+  </div>`;
+}
+
+// ---------- 업무 ----------
+async function saveCur() { cur.updatedAt = Date.now(); await S.saveEvent(cur); }
+
+function taskForm(t) {
+  const isNew = !t;
+  t = t || { t: '', d: -7 };
+  const due = addDays(parseD(cur.date), t.d);
+  openModal(`<h3>${isNew ? '업무 더하기' : '업무 고치기'}</h3>
+    <label class="f">할 일</label><input class="in" id="t-t" value="${esc(t.t)}" placeholder="예: 숙소 배정표 만들기">
+    <label class="f">언제까지 (출발일 기준)</label>
+    <div class="two"><div><select class="in" id="t-side"><option value="-1" ${t.d < 0 ? 'selected' : ''}>출발 며칠 전</option><option value="0" ${t.d === 0 ? 'selected' : ''}>출발 당일</option><option value="1" ${t.d > 0 ? 'selected' : ''}>다녀온 뒤 며칠</option></select></div>
+      <div><input class="in" type="number" min="0" id="t-n" value="${Math.abs(t.d)}"></div></div>
+    <div class="hint" id="t-due">${fmt(due)}까지</div>
+    <div class="mact">${isNew ? '' : `<button class="btn warn" data-act="del-task" data-id="${t.id}">지우기</button>`}<div class="sp"></div>
+      <button class="btn" data-act="close">취소</button><button class="btn pri" data-act="save-task" data-id="${t.id || ''}">${isNew ? '더하기' : '저장'}</button></div>`);
+  $('#t-t').focus();
+}
+function taskOffset() {
+  const side = Number($('#t-side').value), n = Math.max(0, Math.round(Number($('#t-n').value) || 0));
+  return side === 0 ? 0 : side * n;
+}
+
+// ---------- 설문 만들기 ----------
+let draft = null;
+function surveyForm(s) {
+  draft = s ? clone(s) : { ...clone(DEFAULT_SURVEY), _new: true };
+  draft.questions.forEach(q => { q.id = q.id || S.newId(); if (q.type === 'choice' && !q.options) q.options = ['', '']; });
+  renderSurveyForm();
+}
+function renderSurveyForm() {
+  const n = draft.questions.length;
+  const qs = draft.questions.map((q, i) => `
+    <div class="qed">
+      <div class="qh"><b>${i + 1}번</b>
+        <select class="in" data-qi="${i}" data-qf="type">${Object.entries(QTYPES).map(([k, v]) => `<option value="${k}" ${q.type === k ? 'selected' : ''}>${v}</option>`).join('')}</select>
+        <div class="sp"></div>
+        <button class="ib" data-act="q-up" data-i="${i}" ${i === 0 ? 'disabled' : ''}>위로</button>
+        <button class="ib" data-act="q-down" data-i="${i}" ${i === n - 1 ? 'disabled' : ''}>아래로</button>
+        <button class="ib" data-act="q-del" data-i="${i}">빼기</button></div>
+      <input class="in" data-qi="${i}" data-qf="text" value="${esc(q.text)}" placeholder="질문을 적어 주세요">
+      ${q.type === 'choice' ? `<textarea class="in" rows="4" style="margin-top:6px" data-qi="${i}" data-qf="options" placeholder="보기를 한 줄에 하나씩">${esc((q.options || []).join('\n'))}</textarea><div class="hint">보기를 한 줄에 하나씩 적어요</div>` : ''}
+    </div>`).join('');
+  openModal(`<h3>${draft._new ? '새 설문' : '설문 고치기'}</h3>
+    <label class="f">설문 제목</label><input class="in" data-f="title" value="${esc(draft.title)}">
+    <label class="f">질문</label>${qs}
+    <button class="btn sm" data-act="q-add">+ 질문 더하기</button>
+    <div class="hint" style="margin-top:8px">별점과 고르기 질문은 꼭 답해야 하고, 자유롭게 쓰기는 안 적어도 돼요.</div>
+    <div class="mact"><div class="sp"></div><button class="btn" data-act="close">취소</button><button class="btn pri" data-act="save-survey">${draft._new ? '만들기' : '저장'}</button></div>`, true);
+}
+async function saveSurveyForm() {
+  const title = (draft.title || '').trim();
+  if (!title) return toast('설문 제목을 적어 주세요');
+  if (!draft.questions.length) return toast('질문을 하나 이상 넣어 주세요');
+  for (const [i, q] of draft.questions.entries()) {
+    q.text = (q.text || '').trim();
+    if (!q.text) return toast(`${i + 1}번 질문을 적어 주세요`);
+    if (q.type === 'choice') {
+      q.options = [...new Set((q.options || []).map(o => o.trim()).filter(Boolean))];
+      if (q.options.length < 2) return toast(`${i + 1}번 보기를 두 개 이상 적어 주세요`);
+    } else delete q.options;
+  }
+  if (!draft._new && rcount[draft.id] > 0 && !confirm('이미 응답이 있어요. 질문을 바꾸면 결과가 섞일 수 있어요. 그래도 저장할까요?')) return;
+  const isNew = draft._new;
+  const s = {
+    id: draft.id || S.newId(), title, questions: draft.questions.map(q => ({ id: q.id, type: q.type, text: q.text, ...(q.options ? { options: q.options } : {}) })),
+    open: isNew ? true : !!draft.open, owner: user.uid, eventTitle: cur.title,
+    createdAt: draft.createdAt || Date.now(), updatedAt: Date.now(),
+  };
+  await S.saveSurvey(cur.id, s);
+  closeModal();
+  await openEvent(cur.id, true);
+  toast(isNew ? '설문을 만들었어요' : '저장했어요');
+}
+
+// ---------- QR ----------
+function surveyUrl(sid) {
+  const u = new URL('survey.html', location.href);
+  u.hash = ''; u.search = `?e=${encodeURIComponent(cur.id)}&s=${encodeURIComponent(sid)}`;
+  return u.toString();
+}
+function showQR(sid) {
+  const s = surveys.find(x => x.id === sid);
+  const url = surveyUrl(sid);
+  openModal(`<div class="qrbox" id="qrbox">
+      <div class="qt">${esc(s.title)}</div>
+      <div class="qs">${esc(cur.title)} · 휴대폰 카메라로 찍어 주세요</div>
+      <div id="qr"></div>
+      <div class="url noprint">${esc(url)}</div>
+      ${S.mode === 'demo' ? '<div class="note noprint">체험 모드에서는 이 컴퓨터에서만 열려요. 주소를 복사해 새 탭에 붙여 넣으면 학생 화면을 볼 수 있어요.</div>' : ''}
+      ${s.open ? '' : '<div class="note noprint">지금은 마감 상태라 학생이 답할 수 없어요.</div>'}
+    </div>
+    <div class="mact noprint"><button class="btn" data-act="copy" data-url="${esc(url)}">주소 복사</button>
+      <button class="btn" data-act="print">인쇄</button><div class="sp"></div>
+      <button class="btn pri" data-act="full">크게 띄우기</button></div>`);
+  if (window.QRCode) new QRCode($('#qr'), { text: url, width: 260, height: 260, correctLevel: QRCode.CorrectLevel.M });
+  else $('#qr').textContent = 'QR을 그리지 못했어요 (인터넷 연결 확인)';
+}
+
+// ---------- 결과 ----------
+async function showResults(sid) {
+  const s = surveys.find(x => x.id === sid);
+  openModal('<h3>결과 불러오는 중...</h3>', true);
+  const rs = await S.listResponses(cur.id, sid);
+  rcount[sid] = rs.length;
+  const n = rs.length;
+  const blocks = s.questions.map((q, i) => {
+    const vals = rs.map(r => (r.answers || {})[q.id]).filter(v => v !== undefined && v !== '');
+    let body = '';
+    if (!vals.length) body = '<div class="meta">아직 답이 없어요</div>';
+    else if (q.type === 'star') {
+      const avg = vals.reduce((a, b) => a + Number(b), 0) / vals.length;
+      body = `<div class="avg">★ ${avg.toFixed(1)} <span class="meta">/ 5점 · ${vals.length}명</span></div>` +
+        [5, 4, 3, 2, 1].map(k => { const c = vals.filter(v => Number(v) === k).length; const p = Math.round(c / vals.length * 100);
+          return `<div class="rrow"><span>${'★'.repeat(k)}</span><div class="rb"><i style="width:${p}%;background:var(--acc)"></i></div><span class="rn">${c}명</span></div>`; }).join('');
+    } else if (q.type === 'choice') {
+      const opts = [...q.options, ...[...new Set(vals)].filter(v => !q.options.includes(v))];
+      body = opts.map(o => { const c = vals.filter(v => v === o).length; const p = Math.round(c / vals.length * 100);
+        return `<div class="rrow"><span>${esc(o)}</span><div class="rb"><i style="width:${p}%"></i></div><span class="rn">${c}명 ${p}%</span></div>`; }).join('');
+    } else {
+      body = `<div class="meta" style="margin-bottom:6px">${vals.length}명이 적었어요</div><div class="txl">${vals.map(v => `<div>${esc(v)}</div>`).join('')}</div>`;
+    }
+    return `<div class="rq"><div class="rt">${i + 1}. ${esc(q.text)}</div>${body}</div>`;
+  }).join('');
+  openModal(`<h3>${esc(s.title)} 결과</h3>
+    <div><span class="badge ${s.open ? 'ok' : 'gray'}">${s.open ? '받는 중' : '마감'}</span> <span class="badge">응답 ${n}명</span></div>
+    ${n ? blocks : '<div class="empty"><b>아직 응답이 없어요</b>QR을 보여 주고 잠시 뒤에 새로고침해 보세요.</div>'}
+    <div class="mact"><button class="btn" data-act="results" data-id="${sid}">새로고침</button><div class="sp"></div>
+      <button class="btn pri" data-act="csv" data-id="${sid}" ${n ? '' : 'disabled'}>엑셀로 내려받기</button></div>`, true);
+  renderEvent();
+}
+async function downloadCsv(sid) {
+  const s = surveys.find(x => x.id === sid);
+  const rs = await S.listResponses(cur.id, sid);
+  const cell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const rows = [['번호', ...s.questions.map(q => q.text)].map(cell).join(',')];
+  rs.forEach((r, i) => rows.push([i + 1, ...s.questions.map(q => (r.answers || {})[q.id])].map(cell).join(',')));
+  const blob = new Blob(['\ufeff' + rows.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${cur.title}_${s.title}_결과.csv`.replace(/[\\/:*?"<>|]/g, '_');
+  a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+// ---------- 이벤트 연결 ----------
+document.addEventListener('click', async ev => {
+  const el = ev.target.closest('[data-act]');
+  if (!el) { if (ev.target.id === 'ov') closeModal(); return; }
+  const act = el.dataset.act, id = el.dataset.id;
+  try {
+    switch (act) {
+      case 'login': await S.signInGoogle(); break;
+      case 'logout': if (confirm('로그아웃할까요?')) await S.signOut(); break;
+      case 'home': if (user) { await loadEvents(); renderHome(); } break;
+      case 'close': closeModal(); break;
+      case 'new-event': cur = null; eventForm(); break;
+      case 'open': openEvent(id); break;
+      case 'edit-event': eventForm(cur); break;
+      case 'save-event': await saveEventForm(); break;
+      case 'del-event':
+        if (!confirm(`'${cur.title}'을(를) 지울까요? 업무 일정과 설문·응답이 모두 사라져요.`)) return;
+        await S.deleteEvent(cur.id); closeModal(); await loadEvents(); renderHome(); toast('지웠어요'); break;
+      case 'tab': tab = el.dataset.tab; renderEvent(); break;
+      case 'toggle': {
+        const t = cur.tasks.find(x => x.id === id); t.done = el.checked; renderEvent(); await saveCur(); break;
+      }
+      case 'add-task': taskForm(); break;
+      case 'edit-task': taskForm(cur.tasks.find(x => x.id === id)); break;
+      case 'save-task': {
+        const text = $('#t-t').value.trim(); if (!text) return toast('할 일을 적어 주세요');
+        const d = taskOffset();
+        if (id) Object.assign(cur.tasks.find(x => x.id === id), { t: text, d });
+        else cur.tasks.push({ id: S.newId(), t: text, d, done: false });
+        closeModal(); renderEvent(); await saveCur(); break;
+      }
+      case 'del-task':
+        if (!confirm('이 업무를 지울까요?')) return;
+        cur.tasks = cur.tasks.filter(x => x.id !== id); closeModal(); renderEvent(); await saveCur(); break;
+      case 'new-survey': surveyForm(); break;
+      case 'edit-survey': surveyForm(surveys.find(x => x.id === id)); break;
+      case 'q-add': draft.questions.push({ id: S.newId(), type: 'star', text: '' }); renderSurveyForm(); break;
+      case 'q-del': draft.questions.splice(Number(el.dataset.i), 1); renderSurveyForm(); break;
+      case 'q-up': case 'q-down': {
+        const i = Number(el.dataset.i), j = act === 'q-up' ? i - 1 : i + 1;
+        [draft.questions[i], draft.questions[j]] = [draft.questions[j], draft.questions[i]]; renderSurveyForm(); break;
+      }
+      case 'save-survey': await saveSurveyForm(); break;
+      case 'toggle-open': {
+        const s = surveys.find(x => x.id === id); s.open = !s.open; s.updatedAt = Date.now();
+        await S.saveSurvey(cur.id, s); renderEvent(); toast(s.open ? '다시 받기 시작했어요' : '마감했어요'); break;
+      }
+      case 'del-survey': {
+        const s = surveys.find(x => x.id === id);
+        if (!confirm(`'${s.title}' 설문과 응답 ${rcount[id] || 0}개를 지울까요?`)) return;
+        await S.deleteSurvey(cur.id, id); await openEvent(cur.id, true); toast('지웠어요'); break;
+      }
+      case 'qr': showQR(id); break;
+      case 'copy': await navigator.clipboard.writeText(el.dataset.url); toast('주소를 복사했어요'); break;
+      case 'print': document.body.classList.add('printing'); window.print(); document.body.classList.remove('printing'); break;
+      case 'full': { const b = $('#qrbox'); if (b.requestFullscreen) b.requestFullscreen(); break; }
+      case 'results': await showResults(id); break;
+      case 'csv': await downloadCsv(id); break;
+    }
+  } catch (e) {
+    console.error(e); toast('문제가 생겼어요. 잠시 뒤 다시 해 주세요');
+  }
+});
+
+document.addEventListener('input', ev => {
+  const t = ev.target;
+  if (!draft) {
+    if (t.id === 't-n' || t.id === 't-side') $('#t-due').textContent = fmt(addDays(parseD(cur.date), taskOffset())) + '까지';
+    return;
+  }
+  if (t.dataset.f === 'title') draft.title = t.value;
+  if (t.dataset.qi !== undefined) {
+    const q = draft.questions[Number(t.dataset.qi)], f = t.dataset.qf;
+    if (f === 'text') q.text = t.value;
+    if (f === 'options') q.options = t.value.split('\n');
+  }
+});
+document.addEventListener('change', ev => {
+  const t = ev.target;
+  if (t.id === 't-side') { $('#t-due').textContent = fmt(addDays(parseD(cur.date), taskOffset())) + '까지'; return; }
+  if (draft && t.dataset.qf === 'type') {
+    const q = draft.questions[Number(t.dataset.qi)];
+    q.type = t.value;
+    if (q.type === 'choice' && !q.options) q.options = ['', ''];
+    renderSurveyForm();
+  }
+});
+document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && $('#ov').classList.contains('show')) closeModal(); });
+</script>
+</body>
+</html>
