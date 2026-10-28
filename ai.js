@@ -45,7 +45,7 @@ function parseJSON(text) {
             last = e; const m = String(e && e.message || e);
             if (useThink && /think|budget|invalid argument|400/i.test(m)) { think = false; continue; }
             // 모델이 없거나, 그 모델의 무료 사용량이 찼으면 다음 모델로
-            if (!/not found|\b404\b|not supported|unsupported|is not available|invalid model|quota|\b429\b|exhausted|rate.?limit|too many requests/i.test(m)) throw e;
+            if (!/not found|\b404\b|not supported|unsupported|is not available|invalid model|quota|\b429\b|exhausted|rate.?limit|too many requests|abort|timed? ?out|deadline|\b50[34]\b|overloaded|unavailable/i.test(m)) throw e;
             console.warn('AI 모델 건너뜀:', name, m);
             break;
           }
