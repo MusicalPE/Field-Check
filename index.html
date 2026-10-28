@@ -281,6 +281,7 @@ label.f{display:block;font-size:13px;font-weight:800;color:var(--sub);margin:12p
 .qrsm{padding:10px!important}
 @media (max-width:640px){.invite{grid-template-columns:1fr}.invite>div:first-child{display:flex;flex-direction:column;align-items:center}}
 .tabbar{display:none}
+.btn.aibtn{border-color:color-mix(in srgb,var(--acc) 60%,var(--line));background:color-mix(in srgb,var(--acc) 12%,var(--card));color:var(--ink)}
 .docban{display:flex;align-items:center;gap:16px;padding:16px 20px;margin-bottom:20px;border-color:color-mix(in srgb,var(--pri) 30%,var(--line))}
 .docban .dbi{flex:none;width:46px;height:46px;border-radius:14px;background:var(--pri-soft);color:var(--pri);display:grid;place-items:center}
 .docban .dbi svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
@@ -494,6 +495,7 @@ a.chip{text-decoration:none;display:inline-block}
 <script src="xlsx-export.js?v=1.2.0"></script>
 <script src="wx.js?v=1.2.0"></script>
 <script src="kakao-config.js?v=1.2.0"></script>
+<script type="module" src="ai.js?v=1.3.0"></script>
 <script>
 const S = window.Store;
 const $ = s => document.querySelector(s);
@@ -1648,8 +1650,13 @@ async function installGo() {
   try { const c = await installEvt.userChoice; if (c && c.outcome === 'accepted') lsSet(IKEY, '1'); } catch (e) {}
   installEvt = null; if (!cur) renderHome();
 }
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '1.3.0';
 const NEWS = [
+  { v: '1.3.0', d: '2026. 10. 28.', items: [
+    'AI 도우미: 활동지에서 일정표 장소에 맞춘 모둠 조사 질문·현장 미션 만들기',
+    'AI 도우미: 사전 안내 자료의 학부모 안내문과 장소 맞춤 안전 수칙',
+    'AI 도우미: 결과 보고서의 서술형 응답 주제별 정리와 성과·개선할 점 초안',
+  ] },
   { v: '1.2.0', d: '2026. 10. 28.', items: [
     '사전 안내 자료: 일정, 준비물, 안전 수칙, 모둠 활동, QR 모음을 한 문서로 (인쇄·PDF)',
     '결과 보고서: 개요부터 추진 경과, 사전 교육, 운영 일정, 인원 점검, 사후 평가, 성과와 개선점까지 자동 정리 (인쇄·PDF)',
@@ -1778,9 +1785,44 @@ function renderSheetForm() {
     <label class="f">안내 (학생 화면 맨 위에 보여요)</label><textarea class="in" rows="2" data-hd="intro">${esc(hdraft.intro || '')}</textarea>
     <label class="f">모둠 (한 줄에 하나씩)</label><textarea class="in" rows="4" data-hd="groupText">${esc(hdraft.groupText)}</textarea>
     <div class="hint">모둠마다 QR이 따로 만들어져요. 이름을 바꾸거나 줄을 더하고 빼면 돼요.</div>
-    <label class="f">질문·미션</label>${qs}
+    <div class="rowb" style="margin-top:14px"><label class="f" style="margin:0">질문·미션</label><button class="btn sm aibtn" data-act="hq-ai">${AI_ICON}AI로 장소 맞춤 ${hdraft.phase === 'day' ? '미션' : '질문'} 만들기</button></div>
+    <div class="hint">일정표의 장소와 대상 학년을 보고 만들어요. 만든 뒤 고쳐서 쓰면 돼요.</div>${qs}
     <button class="btn sm" data-act="hq-add">+ 질문 더하기</button>
     <div class="mact"><div class="sp"></div><button class="btn" data-act="close">취소</button><button class="btn pri" data-act="sh-save">${hdraft._new ? '만들기' : '저장'}</button></div>`, true);
+}
+const AI_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true" style="width:15px;height:15px;margin-right:4px;vertical-align:-2px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M12 3l1.8 4.6L18 9.4l-4.2 1.8L12 16l-1.8-4.8L6 9.4l4.2-1.8z"/><path d="M19 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></svg>';
+function aiReady() {
+  const A = window.FCAI;
+  if (!A || A.state === 'loading') { toast('AI를 준비하는 중이에요. 잠시 뒤 다시 눌러 주세요'); return null; }
+  if (A.state !== 'ready') { toast(A.why || 'AI를 쓸 수 없어요', 5000); return null; }
+  return A;
+}
+async function aiSheet(btn) {
+  const A = aiReady(); if (!A) return;
+  const days = tripDays(), plans = plansOf();
+  const sched = days.map((d, i) => `${i + 1}일차: ` + plans.filter(p => p.day === i + 1).sort((a, b) => (a.time || '') < (b.time || '') ? -1 : 1).map(p => p.title).join(', ')).join('\n');
+  const phase = hdraft.phase === 'day' ? 'day' : 'pre';
+  const prompt = `너는 초등학교 선생님을 돕는 체험학습 활동지 도우미야.
+체험학습: ${cur.title} (${cur.kind}), 대상: ${cur.target || classesOf(cur).map(c => c.name).join(', ')}, 장소: ${cur.place || (pub && pub.place && pub.place.name) || ''}
+일정:
+${sched || '(일정표 없음)'}
+${phase === 'pre' ? `출발 전에 모둠이 함께 하는 "사전 조사" 활동지 질문을 만들어 줘. 모둠이 맡은 곳을 미리 조사하고, 현장에서 확인할 것을 정하게 해.` : `현장에서 모둠이 함께 해결하는 "현장 미션" 활동지를 만들어 줘. 일정표의 실제 장소마다 직접 보고 찾고 세어 보고 적는 미션으로, 장소 이름을 넣어 구체적으로.`}
+조건:
+- 질문은 5~6개, 학년 수준에 맞게 짧고 쉽게, 학생에게 말하듯 "~해요/~적어 주세요" 말투
+- 답은 글로 쓰기(text) 또는 고르기(choice)만. 사진을 찍어 올리는 문항은 만들지 마
+- 고르기는 보기 3~4개
+- 확실하지 않은 사실(숫자, 연도)을 정답처럼 단정하지 마. 학생이 현장에서 직접 확인하게 해
+JSON으로만 답해: {"title":"활동지 제목","intro":"학생 화면 맨 위 안내 한두 문장","questions":[{"type":"text","text":"..."},{"type":"choice","text":"...","options":["...","..."]}]}`;
+  const old = btn.innerHTML; btn.disabled = true; btn.textContent = 'AI가 만드는 중...';
+  try {
+    const r = await A.ask(prompt, 0.6);
+    const qs = (r.questions || []).filter(q => q && q.text).slice(0, 10).map(q => ({ id: S.newId(), type: q.type === 'choice' && Array.isArray(q.options) && q.options.length >= 2 ? 'choice' : 'text', text: String(q.text).trim(), ...(q.type === 'choice' && Array.isArray(q.options) && q.options.length >= 2 ? { options: q.options.map(String).slice(0, 6) } : {}) }));
+    if (!qs.length) throw new Error('질문을 만들지 못했어요');
+    if (hdraft.questions.some(q => (q.text || '').trim()) && !confirm('지금 질문을 AI가 만든 질문으로 바꿀까요?')) { btn.disabled = false; btn.innerHTML = old; return; }
+    hdraft.questions = qs; if (r.intro) hdraft.intro = String(r.intro);
+    if (r.title && hdraft._new) hdraft.title = String(r.title);
+    renderSheetForm(); toast('AI가 만든 질문을 넣었어요. 확인하고 고쳐 주세요', 4000);
+  } catch (e) { console.error(e); toast(A.errorText(e), 5000); btn.disabled = false; btn.innerHTML = old; }
 }
 async function saveSheetForm() {
   const title = (hdraft.title || '').trim();
@@ -2214,6 +2256,7 @@ document.addEventListener('click', async ev => {
       case 'pack-start-s': await startStudentList(); break;
       case 'sf-new': safetyForm(); break;
       case 'sh-new': sheetForm(null, id); break;
+      case 'hq-ai': await aiSheet(el); break;
       case 'share': shareModal(); break;
       case 'share-make': await makeShare(); break;
       case 'import-go': await importShare(); break;

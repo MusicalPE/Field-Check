@@ -8,3 +8,9 @@ window.FIREBASE_CONFIG = {
   messagingSenderId: "344369756170",
   appId: "1:344369756170:web:00eb1c7fbf2208228987f3"
 };
+
+// AI 도우미 (문서 초안) — 설정_안내.txt의 AI 단계를 마친 뒤 채워 주세요
+// App Check(reCAPTCHA Enterprise) 사이트 키. 비어 있으면 AI 버튼은 안내만 보여 줘요.
+window.RECAPTCHA_SITE_KEY = "";
+// 쓸 AI 모델 이름 (앞에서부터 차례로 시도)
+window.AI_MODELS = ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-2.5-flash"];

@@ -70,6 +70,13 @@
   .saved{font-size:12px;color:var(--sub);margin-left:6px}
   .hint{font-size:12px;color:var(--sub);margin:4px 0}
   .draft{font:inherit;font-size:12.5px;font-weight:800;border:1.5px solid var(--pri);color:var(--pri);background:#fff;border-radius:999px;padding:4px 12px;cursor:pointer;margin-left:6px}
+  .draft.ai{border-color:#D9A23A;background:#FBF3E2;color:#6B4A12}
+  .draft[disabled]{opacity:.6;cursor:wait}
+  .draft svg{width:14px;height:14px;vertical-align:-2px;margin-right:3px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#232C22;color:#fff;padding:10px 18px;border-radius:999px;font-weight:800;font-size:13.5px;z-index:20;max-width:90vw;text-align:center;opacity:0;transition:opacity .2s;pointer-events:none}
+  .toast.show{opacity:1}
+  table.themes td.n{width:70px}
+  .aisum{background:#FBF8EF;border-left:3px solid var(--mid);padding:8px 12px;margin:8px 0;font-size:13.5px;word-break:keep-all}
   .bar{display:inline-block;width:90px;height:8px;border-radius:4px;background:#EEF1EB;vertical-align:middle;margin-left:6px;overflow:hidden}
   .bar i{display:block;height:100%;background:var(--hi)}
   .foot{color:var(--sub);font-size:11.5px;margin-top:22px;border-top:1px solid var(--line);padding-top:8px}
@@ -84,7 +91,7 @@
     html{background:#fff}
     .tools,.parts{display:none}
     .page{width:auto;margin:0;padding:0;box-shadow:none}
-    .note,.saved,.draft,.hint.screen{display:none}.note-print{display:block}.note-empty{display:none}
+    .note,.saved,.draft,.hint.screen,.toast{display:none}.note-print{display:block}.note-empty{display:none}
     tr,.box,.qr{break-inside:avoid}
     h2{break-after:avoid}
     .wx-hint{display:none}
@@ -106,6 +113,7 @@
 <script src="config.js?v=1.2.0"></script>
 <script src="store.js?v=1.2.0"></script>
 <script src="wx.js?v=1.2.0"></script>
+<script type="module" src="ai.js?v=1.3.0"></script>
 <script>
 const S = window.Store;
 const app = document.getElementById('app');
@@ -182,6 +190,102 @@ app.addEventListener('click', ev => {
   const text = DRAFTS[b.dataset.draft] || '';
   if (t.value.trim() && !confirm('지금 적힌 글 뒤에 초안을 덧붙일까요?')) return;
   t.value = (t.value.trim() ? t.value.trim() + '\n' : '') + text; t.dispatchEvent(new Event('input', { bubbles: true }));
+});
+
+// ---------- AI ----------
+const AI_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 4.6L18 9.4l-4.2 1.8L12 16l-1.8-4.8L6 9.4l4.2-1.8z"/><path d="M19 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></svg>';
+const aiBtn = (k, label) => `<button class="draft ai" data-ai="${k}">${AI_SVG}${label}</button>`;
+function toast(t, ms = 3000) { let el = document.querySelector('.toast'); if (!el) { el = document.createElement('div'); el.className = 'toast'; document.body.appendChild(el); } el.textContent = t; el.classList.add('show'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('show'), ms); }
+function aiReady() {
+  const A = window.FCAI;
+  if (!A || A.state === 'loading') { toast('AI를 준비하는 중이에요. 잠시 뒤 다시 눌러 주세요'); return null; }
+  if (A.state !== 'ready') { toast(A.why || 'AI를 쓸 수 없어요', 5000); return null; }
+  return A;
+}
+function setNote(key, text, ask = true) {
+  const t = app.querySelector(`[data-note="${key}"]`); if (!t) return;
+  if (t.value.trim() && ask && !confirm('지금 적힌 글을 AI 초안으로 바꿀까요?\n(취소를 누르면 지금 글 뒤에 덧붙여요)')) t.value = t.value.trim() + '\n' + text;
+  else t.value = text;
+  t.dispatchEvent(new Event('input', { bubbles: true }));
+}
+const mask = x => (window.FCAI && window.FCAI.mask ? window.FCAI.mask(x) : String(x || ''));
+function tripBrief() {
+  const e = D.ev, plans = (D.pub && D.pub.plans) || [];
+  return {
+    체험학습: e.title, 종류: e.kind, 대상: e.target || '', 인원: D.total, 반: D.classes.map(c => `${c.name} ${c.total}명`).join(', '),
+    기간: `${fmtFull(e.date)}${e.endDate ? ' ~ ' + fmtFull(e.endDate) : ''} (${D.days.length > 1 ? `${D.days.length - 1}박 ${D.days.length}일` : '당일'})`,
+    장소: e.place || (D.pub && D.pub.place && D.pub.place.name) || '', 주소: (e.pinfo && e.pinfo.addr) || '',
+    일정: D.days.map((d, i) => `${i + 1}일차(${fmtD(d)}): ` + plans.filter(p => p.day === i + 1).sort((a, b) => (a.time || '') < (b.time || '') ? -1 : 1).map(p => `${p.time || ''} ${p.title}${p.memo ? `(${p.memo})` : ''}`).join(', ')),
+  };
+}
+function resultBrief() {
+  const e = D.ev, tasks = e.tasks || [];
+  const svs = D.surveys.map(s => { const m = svSummary(s); return { 시기: phaseOf(s) === 'pre' ? '사전' : '사후', 제목: s.title, 응답: m.n,
+    별점: m.stars.map(x => ({ 문항: x.q.text, 평균: +x.avg.toFixed(2), '4~5점': x.hi })), 고르기: m.choices.map(x => ({ 문항: x.q.text, 결과: x.rows.filter(r => r.c).slice(0, 4).map(r => `${r.o} ${r.c}명`) })),
+    서술: m.texts.map(t => ({ 문항: t.q.text, 응답수: t.list.length, 예: [...new Set(t.list.map(mask))].slice(0, 25) })),
+    주제정리: (e.aiThemes && e.aiThemes[s.id]) || null }; });
+  const slots = D.roll ? Object.entries(D.roll.slots || {}).map(([id, s]) => ({ id, ...s })) : [];
+  return { ...tripBrief(),
+    업무: { 전체: tasks.length, 완료: tasks.filter(t => t.done).length, 못한것: tasks.filter(t => !t.done).map(t => t.t) },
+    안전교육: D.safeties.map(s => { const vs = D.views[s.id] || []; const by = {}; vs.forEach(v => { by[PLACES[v.place] || v.place] = (by[PLACES[v.place] || v.place] || 0) + 1; }); return { 제목: s.title, 시청완료: vs.length, 전체: D.total, 장소별: by }; }),
+    준비물: D.plist ? { 항목: D.plist.items.length, 다챙김알림: D.checks } : null,
+    인원점검: slots.filter(s => D.marks.some(m => m.slot === s.id)).map(s => ({ 때: `${s.date} ${s.time} ${s.label}`, 확인: D.marks.filter(m => m.slot === s.id).length, 전체: D.total })),
+    활동지: D.sheets.map(h => ({ 제목: h.title, 시기: h.phase === 'pre' ? '사전' : '현장', 제출모둠: (D.ans[h.id] || []).length, 전체모둠: groupsOf(h).length })),
+    설문: svs };
+}
+const AIJOBS = {
+  async rules(A) {
+    const r = await A.ask(`너는 초등학교 선생님을 돕는 체험학습 안전 지도 도우미야. 아래 체험학습에 맞는 학생용 안전 수칙을 만들어 줘.
+${JSON.stringify(tripBrief(), null, 1)}
+조건: 8~10개, 초등학생이 읽기 쉬운 짧은 문장, "~해요/~하지 않아요" 말투. 일정에 나온 실제 장소와 활동(버스, 유적지, 박물관, 놀이공원, 바닷가, 숙소 등)에 맞춰 구체적으로. ${D.days.length > 1 ? '숙박이 있으니 숙소 안전(비상구, 밤 외출 금지 등)도 넣어.' : '당일 일정이야.'} 길 잃었을 때, 몸이 아플 때 행동도 넣어.
+JSON으로만 답해: {"rules":["...","..."]}`, 0.4);
+    const list = (r.rules || []).map(String).filter(Boolean); if (!list.length) throw new Error('수칙을 만들지 못했어요');
+    setNote('rules', list.join('\n'));
+  },
+  async letter(A) {
+    const pk = D.plist ? D.plist.items.filter(i => i.imp).map(i => i.t) : [];
+    const r = await A.ask(`너는 초등학교 선생님을 돕는 가정통신문 도우미야. 아래 체험학습을 학부모님께 안내하는 글을 써 줘.
+${JSON.stringify({ ...tripBrief(), 꼭챙길준비물: pk, 안전교육: D.safeties.map(s => s.title) }, null, 1)}
+조건: 학부모님께 드리는 정중하고 따뜻한 안내문. 인사 → 체험학습의 목적과 기대 → 일시·장소·대상 요약 → 준비물과 안전 교육 영상 시청(가정에서 함께) 협조 부탁 → 마무리 인사. 7~10문장, 문단 2~4개. 학교 이름, 선생님 이름, 날씨 예보, 확실하지 않은 비용·연락처는 쓰지 마.
+JSON으로만 답해: {"letter":"..."}`, 0.6);
+    if (!r.letter) throw new Error('안내문을 만들지 못했어요');
+    setNote('letter', String(r.letter).trim());
+  },
+  async themes(A) {
+    const post = D.surveys.filter(s => phaseOf(s) === 'post' && (D.resp[s.id] || []).length);
+    if (!post.length) throw new Error('사후 설문 응답이 아직 없어요');
+    const out = { ...(D.ev.aiThemes || {}) };
+    for (const s of post) {
+      const m = svSummary(s); if (!m.texts.length) continue;
+      const data = m.texts.map(t => ({ 질문: t.q.text, 응답: t.list.map(x => mask(x).slice(0, 200)).slice(0, 300) }));
+      const r = await A.ask(`너는 초등학교 선생님을 돕는 설문 정리 도우미야. 체험학습 사후 설문의 서술형 응답을 질문별로 비슷한 내용끼리 주제로 묶어 줘.
+${JSON.stringify(data, null, 1)}
+조건: 질문마다 주제 3~6개, 응답 수가 많은 순서. 주제 이름은 짧은 명사구. count는 그 주제에 들어간 응답 수(한 응답은 한 주제에만). example은 실제 응답 하나를 그대로(○ 표시는 그대로 둠). 학생 이름이나 개인을 알아볼 수 있는 내용은 절대 쓰지 마. summary는 전체를 보고서 문체(개조식, "~함")로 1~2문장.
+JSON으로만 답해: {"items":[{"q":"질문","themes":[{"name":"","count":0,"example":""}]}],"summary":"..."}`, 0.2);
+      out[s.id] = { at: Date.now(), items: (r.items || []).map(it => ({ q: String(it.q || ''), themes: (it.themes || []).map(t => ({ name: String(t.name || ''), count: Number(t.count) || 0, example: mask(String(t.example || '')) })) })), summary: String(r.summary || '') };
+    }
+    D.ev.aiThemes = out;
+    await S.updateEvent(eid, { aiThemes: out, updatedAt: Date.now() });
+    render();
+  },
+  async outcome(A) {
+    const r = await A.ask(`너는 초등학교 선생님을 돕는 체험학습 결과 보고서 도우미야. 아래 자료만 근거로 "성과"와 "개선할 점"을 써 줘.
+${JSON.stringify(resultBrief(), null, 1)}
+조건: 학교 보고서 문체(개조식, 문장 끝은 "~함", "~음", "~필요함"). 성과 3~5개, 개선할 점 2~4개. 가능하면 숫자(인원, 비율, 평균 점수)를 근거로 넣고, 서술형 응답에서 나온 학생 목소리도 반영해. 자료에 없는 사실은 지어내지 마. 학생 이름은 쓰지 마.
+JSON으로만 답해: {"good":["..."],"improve":["..."]}`, 0.4);
+    const g = (r.good || []).map(String).filter(Boolean), im = (r.improve || []).map(String).filter(Boolean);
+    if (!g.length && !im.length) throw new Error('초안을 만들지 못했어요');
+    if (g.length) setNote('good', g.map(x => '- ' + x.replace(/^[-·•]\s*/, '')).join('\n'));
+    if (im.length) setNote('improve', im.map(x => '- ' + x.replace(/^[-·•]\s*/, '')).join('\n'));
+  },
+};
+app.addEventListener('click', async ev => {
+  const b = ev.target.closest('[data-ai]'); if (!b) return;
+  const A = aiReady(); if (!A) return;
+  const old = b.innerHTML; b.disabled = true; b.textContent = 'AI가 쓰는 중...';
+  try { await AIJOBS[b.dataset.ai](A); toast('AI 초안을 넣었어요. 꼭 읽어 보고 고쳐 주세요', 4000); }
+  catch (e) { console.error(e); toast(A.errorText ? A.errorText(e) : String(e.message || e), 5000); }
+  if (b.isConnected) { b.disabled = false; b.innerHTML = old; }
 });
 
 // ---------- 섹션 켜고 끄기 ----------
@@ -263,7 +367,7 @@ function guide() {
   const end = parseD(e.endDate || e.date), today = new Date(); today.setHours(0, 0, 0, 0);
   const wx = place && end >= today ? `<div class="wxwrap">${D.wx ? WX.table(D.days, D.wx) : '<p class="meta">날씨 예보를 불러오는 중이에요…</p>'}</div><p class="hint">예보는 바뀔 수 있어요. 출발 전날 휴대폰 일정표(QR)에서 다시 확인해 주세요.</p>` : '';
   const safety = D.safeties.length ? `<h3>안전 교육 영상</h3><ul>${D.safeties.map(s => `<li><b>${esc(s.title)}</b> · 영상 ${(s.videos || []).length}개${classPlan(s) ? ` · ${esc(classPlan(s))}` : ''}${s.memo ? ` · ${esc(s.memo)}` : ''}<br><span class="meta">집에서 가족과 함께 QR로 영상을 끝까지 보고, ${D.classes.length > 1 ? '반과 ' : ''}번호를 눌러 주세요.</span></li>`).join('')}</ul>` : '';
-  const rules = `<h3>꼭 지켜요</h3>${noteBox('rules', '안전 수칙을 적어 주세요', 8)}`;
+  const rules = `<h3>꼭 지켜요 ${aiBtn('rules', 'AI로 장소 맞춤 수칙')}</h3>${noteBox('rules', '안전 수칙을 적어 주세요', 8)}`;
   const preSh = D.sheets.filter(h => h.phase === 'pre'), daySh = D.sheets.filter(h => h.phase === 'day');
   const group = (preSh.length || daySh.length) ? `<div class="grid2">${[...preSh, ...daySh].map(h => `<div class="box avoid"><h3>${esc(h.title)} <span class="meta">${h.phase === 'pre' ? '출발 전' : '현장에서'}</span></h3>${h.intro ? `<p class="meta" style="margin:0 0 4px">${esc(h.intro)}</p>` : ''}<ol style="margin:4px 0;padding-left:20px">${h.questions.map(q => `<li>${esc(q.text)}${q.type === 'choice' ? ` <span class="meta">(${q.options.map(esc).join(' / ')})</span>` : ''}</li>`).join('')}</ol></div>`).join('')}</div>
     <p class="hint">모둠마다 QR이 따로 있어요. 선생님이 모둠별로 나눠 줘요.</p>` : '';
@@ -274,6 +378,7 @@ function guide() {
     <div class="eyebrow">${esc(e.target || '')}${e.target ? ' · ' : ''}${esc(e.kind || '현장체험학습')} 사전 안내</div>
     <h1>${esc(e.title)}</h1>
     <div class="meta">학생과 가족이 함께 읽어 주세요.</div>
+    ${sec('letter', '가정에 드리는 글', `<p class="hint screen" style="margin-top:0">${aiBtn('letter', 'AI로 안내문 쓰기')} 일정·준비물·안전 교육을 보고 학부모님께 드리는 글을 써 줘요.</p>` + noteBox('letter', '학부모님께 드리는 인사와 안내를 적어 주세요. 비워 두면 인쇄할 때 빠져요.', 5))}
     ${sec('ov', '언제, 어디로 가요', ov)}
     ${sec('plan', '일정', plansTable())}
     ${sec('wx', '날씨', wx)}
@@ -303,7 +408,11 @@ function svTable(s, withQuotes) {
     ...m.stars.map(x => `<tr><td>${esc(x.q.text)}</td><td class="n">${x.avg.toFixed(2)}점</td><td>4~5점 ${x.hi}명 (${pct(x.hi, x.c)}%)</td></tr>`),
     ...m.choices.map(x => `<tr><td>${esc(x.q.text)}</td><td class="n">${x.rows[0].c}명</td><td>1위 "${esc(x.rows[0].o)}" (${pct(x.rows[0].c, x.total)}%)${x.rows[1] && x.rows[1].c ? `, 2위 "${esc(x.rows[1].o)}" ${x.rows[1].c}명` : ''}</td></tr>`),
   ].join('');
-  const quotes = withQuotes ? m.texts.map(t => { const seen = new Set(), pick = t.list.filter(x => { const k = x.replace(/[\s.!~,]+/g, ''); if (seen.has(k)) return false; seen.add(k); return true; }).slice(0, 4);
+  const AT = (D.ev.aiThemes || {})[s.id];
+  const themeOf = q => AT && AT.items.find(it => it.q === q.text || it.q.includes(q.text) || q.text.includes(it.q));
+  const quotes = withQuotes ? (AT && AT.summary ? `<div class="aisum"><b>정리</b> ${esc(AT.summary)}</div>` : '') + m.texts.map(t => {
+    const th = themeOf(t.q);
+    if (th && th.themes.length) return `<div class="avoid"><p class="meta" style="margin:8px 0 2px"><b>${esc(t.q.text)}</b> (${t.list.length}명)</p><table class="list themes"><tr><th>주제</th><th class="c">응답</th><th>대표 응답</th></tr>${th.themes.map(x => `<tr><td><b>${esc(x.name)}</b></td><td class="n">${x.count}명</td><td>"${esc(x.example)}"</td></tr>`).join('')}</table></div>`; const seen = new Set(), pick = t.list.filter(x => { const k = x.replace(/[\s.!~,]+/g, ''); if (seen.has(k)) return false; seen.add(k); return true; }).slice(0, 4);
     return `<div class="avoid"><p class="meta" style="margin:8px 0 2px"><b>${esc(t.q.text)}</b> (${t.list.length}명)</p><ul>${pick.map(x => `<li>"${esc(x)}"</li>`).join('')}</ul></div>`; }).join('') : '';
   return `<h3>${esc(s.title)} <span class="meta">응답 ${m.n}명${D.total ? ` / ${D.total}명 (${pct(m.n, D.total)}%)` : ''}</span></h3>
     ${rows ? `<table class="list"><tr><th>문항</th><th class="c">결과</th><th>내용</th></tr>${rows}</table>` : ''}${quotes}`;
@@ -351,7 +460,8 @@ function report() {
   const daySh = D.sheets.filter(h => h.phase === 'day');
   const field = daySh.length ? `<table class="list"><tr><th>활동지</th><th class="c">제출</th><th>내용</th></tr>${daySh.map(shRow).join('')}</table>` : '';
   const postSv = D.surveys.filter(s => phaseOf(s) === 'post');
-  const post = postSv.length ? postSv.map(s => svTable(s, true)).join('') + `<p class="hint">자세한 결과는 붙임 "사후 설문 결과"를 봐 주세요.</p>` : '';
+  const post = postSv.length ? `<p class="hint screen" style="margin:0 0 4px">${aiBtn('themes', (D.ev.aiThemes && postSv.some(s => D.ev.aiThemes[s.id])) ? 'AI로 다시 정리하기' : 'AI로 서술형 주제별 정리')} 학생 글을 비슷한 내용끼리 묶어 몇 명이 그렇게 답했는지 보여 줘요.</p>`
+    + postSv.map(s => svTable(s, true)).join('') + `<p class="hint">자세한 결과는 붙임 "사후 설문 결과"를 봐 주세요.</p>` : '';
   // 초안
   const g = [], im = [];
   if (tasks.length) g.push(`출발일을 기준으로 업무 ${tasks.length}가지를 일정에 맞춰 진행했다(${tdone}가지 완료).`);
@@ -363,7 +473,8 @@ function report() {
   D.safeties.forEach(s => { const vs = (D.views[s.id] || []).length; if (vs < D.total) im.push(`안전 교육 영상을 보지 못한 학생 ${D.total - vs}명에 대한 보충 지도가 필요하다.`); });
   if (tasks.length > tdone) im.push(`완료하지 못한 업무 ${tasks.length - tdone}가지를 점검한다.`);
   DRAFTS = { good: g.map(x => '- ' + x).join('\n'), improve: im.map(x => '- ' + x).join('\n') };
-  const outcome = `<h3>성과 <button class="draft" data-draft="good">자료로 초안 넣기</button></h3>${noteBox('good', '잘된 점과 성과를 적어 주세요. "자료로 초안 넣기"를 누르면 앱에 쌓인 자료로 문장을 만들어 줘요.', 5)}
+  const outcome = `<p class="hint screen" style="margin:0 0 4px">${aiBtn('outcome', 'AI로 성과·개선점 쓰기')} 설문 점수와 학생 글, 시청률, 인원 점검 자료를 읽고 보고서 문체로 써 줘요.</p>
+    <h3>성과 <button class="draft" data-draft="good">자료로 초안 넣기</button></h3>${noteBox('good', '잘된 점과 성과를 적어 주세요. "자료로 초안 넣기"를 누르면 앱에 쌓인 자료로 문장을 만들어 줘요.', 5)}
     <h3>개선할 점 <button class="draft" data-draft="improve">자료로 초안 넣기</button></h3>${noteBox('improve', '다음에 바꿀 점을 적어 주세요.', 4)}
     <h3>기타</h3>${noteBox('etc', '예산 집행, 특이 사항 등 (선택)', 3)}`;
   const att = [postSv.length ? '사후 설문 결과 1부' : '', D.plist ? '준비물 안내 1부' : '', '사진 자료 1부 (따로 첨부)'].filter(Boolean);
