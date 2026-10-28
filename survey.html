@@ -2,39 +2,76 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#3D6B35">
 <title>체험첵! 설문</title>
 <link rel="icon" href="favicon-32.png">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=Nanum+Gothic:wght@400;700;800&family=IBM+Plex+Mono:wght@500&display=swap">
 <style>
-  :root{--bg:#f4f6fb;--card:#fff;--ink:#1c2333;--sub:#6b7487;--line:#e3e7ef;--pri:#2457d6;--pri-soft:#e9efff;--acc:#f5b301;--ok:#1f9d6b;--warn:#d93f45}
+  :root{
+  --bg:#F3F6EF; --card:#FFFFFF; --soft:#F6F8F2; --ink:#232C22; --sub:#5F6E5B; --line:#DCE6D4;
+  --pri:#3D6B35; --pri-soft:#E8F0E2; --on-pri:#FFFFFF;
+  --acc:#D9A23A; --acc-soft:#FBF1DC; --acc-ink:#7A5310;
+  --brown:#A8693A; --brown-soft:#F6EADF;
+  --ok:#2E8B57; --ok-soft:#E1F3E8; --warn:#C94A35; --warn-soft:#FBE7E3;
+  --sky:#A9D6DC; --shadow:rgba(61,107,53,.08);
+  --f-display:"Do Hyeon","Noto Sans KR",sans-serif;
+  --f-body:"Nanum Gothic","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121812; --card:#1A231A; --soft:#1F2A1F; --ink:#E3ECE0; --sub:#9DB09A; --line:#2C3A2B;
+  --pri:#8CC27C; --pri-soft:#243523; --on-pri:#121812;
+  --acc:#F0BE5A; --acc-soft:#3A2F17; --acc-ink:#F0BE5A;
+  --brown:#D99A68; --brown-soft:#3A2A1E;
+  --ok:#6FCB95; --ok-soft:#1D3527; --warn:#EE8470; --warn-soft:#3D2420;
+  --sky:#1F3A3E; --shadow:rgba(0,0,0,.3); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121812; --card:#1A231A; --soft:#1F2A1F; --ink:#E3ECE0; --sub:#9DB09A; --line:#2C3A2B;
+  --pri:#8CC27C; --pri-soft:#243523; --on-pri:#121812;
+  --acc:#F0BE5A; --acc-soft:#3A2F17; --acc-ink:#F0BE5A;
+  --brown:#D99A68; --brown-soft:#3A2A1E;
+  --ok:#6FCB95; --ok-soft:#1D3527; --warn:#EE8470; --warn-soft:#3D2420;
+  --sky:#1F3A3E; --shadow:rgba(0,0,0,.3); color-scheme:dark}
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',system-ui,sans-serif;font-size:17px;line-height:1.55}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:17px;line-height:1.55}
   main{max-width:560px;margin:0 auto;padding:20px 16px 60px}
-  .top{background:var(--pri);color:#fff;border-radius:20px;padding:22px 20px;margin-bottom:16px}
+  .top{background:var(--pri);color:var(--on-pri);border-radius:20px;padding:22px 20px;margin-bottom:16px}
   .top .ev{font-size:14px;opacity:.85}
   .top h1{margin:4px 0 8px;font-size:24px;font-weight:900}
   .top p{margin:0;font-size:14px;opacity:.9}
   .q{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;margin-bottom:12px}
-  .q.miss{border-color:var(--warn);box-shadow:0 0 0 3px #fde3e4}
+  .q.miss{border-color:var(--warn);box-shadow:0 0 0 3px var(--warn-soft)}
   .q .n{display:inline-block;background:var(--pri-soft);color:var(--pri);font-weight:700;font-size:13px;border-radius:999px;padding:2px 10px;margin-bottom:8px}
   .q .t{font-weight:700;margin-bottom:12px}
   .opt-note{font-size:13px;color:var(--sub);font-weight:400}
   .stars{display:flex;gap:6px;justify-content:space-between}
-  .star{flex:1;aspect-ratio:1;max-width:68px;border:2px solid var(--line);border-radius:16px;background:#fff;font-size:30px;color:#cfd5e0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.12s}
-  .star.on{color:var(--acc);border-color:var(--acc);background:#fff8e1}
+  .star{flex:1;aspect-ratio:1;max-width:68px;border:2px solid var(--line);border-radius:16px;background:var(--card);font-size:30px;color:var(--line);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.12s}
+  .star.on{color:var(--acc);border-color:var(--acc);background:var(--card)8e1}
   .star-cap{text-align:center;font-size:14px;color:var(--sub);margin-top:8px;min-height:21px}
-  .choice{display:block;width:100%;text-align:left;border:2px solid var(--line);background:#fff;border-radius:14px;padding:13px 14px;margin-bottom:8px;font:inherit;cursor:pointer}
+  .choice{display:block;width:100%;text-align:left;border:2px solid var(--line);background:var(--card);border-radius:14px;padding:13px 14px;margin-bottom:8px;font:inherit;cursor:pointer}
   .choice.on{border-color:var(--pri);background:var(--pri-soft);font-weight:700}
   textarea{width:100%;min-height:96px;border:2px solid var(--line);border-radius:14px;padding:12px;font:inherit;resize:vertical}
   textarea:focus{outline:none;border-color:var(--pri)}
-  .submit{width:100%;border:0;background:var(--pri);color:#fff;font:inherit;font-weight:900;font-size:19px;padding:16px;border-radius:16px;cursor:pointer;margin-top:6px}
+  .submit{width:100%;border:0;background:var(--pri);color:var(--on-pri);font:inherit;font-weight:900;font-size:19px;padding:16px;border-radius:16px;cursor:pointer;margin-top:6px}
   .submit:disabled{opacity:.6}
   .msg{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:40px 22px;text-align:center;margin-top:30px}
   .msg .big{font-size:52px;line-height:1;margin-bottom:12px;color:var(--pri)}
   .msg h2{margin:0 0 8px;font-size:22px}
   .msg p{margin:0;color:var(--sub)}
   .err{color:var(--warn);text-align:center;font-size:14px;margin-top:10px;min-height:20px}
+
+body{font-family:var(--f-body)!important;background:linear-gradient(180deg,color-mix(in srgb,var(--sky) 40%,var(--bg)) 0,var(--bg) 360px) no-repeat,var(--bg)!important}
+.top{background:linear-gradient(135deg,var(--pri),color-mix(in srgb,var(--pri) 70%,#1d3a18))!important;color:var(--on-pri)!important;border-radius:24px!important;box-shadow:0 10px 26px var(--shadow);position:relative;overflow:hidden}
+.top::after{content:"";position:absolute;right:-14px;bottom:-18px;width:96px;height:96px;background:url(icon-180.png) center/cover;border-radius:24px;opacity:.22;transform:rotate(-10deg)}
+.top h1{font-family:var(--f-display);font-weight:400!important;font-size:30px!important;line-height:1.2}
+.card,.q,.grp,.msg{border-radius:22px!important;box-shadow:0 4px 16px var(--shadow)}
+h2{font-family:var(--f-display);font-weight:400!important}
+.msg h2,.card h2{font-size:22px!important}
+.step{font-family:var(--f-body)}
+.num,.nums button{font-family:var(--f-mono)!important;font-weight:500!important}
+.submit,.big,.send{border-radius:999px!important;box-shadow:0 6px 16px color-mix(in srgb,var(--pri) 25%,transparent)}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
 </style>
 </head>
 <body>
