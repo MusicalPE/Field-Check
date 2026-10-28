@@ -112,6 +112,12 @@
   .pl-g ul{margin:4px 0 10px;padding:0;list-style:none;font-size:14px}
   .pl-g li{padding:2px 0}
   .qrbox:fullscreen .pl{display:none}
+  .nums{display:grid;grid-template-columns:repeat(auto-fill,minmax(58px,1fr));gap:8px;margin-top:12px}
+  .num{border:2px solid var(--line);background:#fff;border-radius:12px;padding:8px 4px;text-align:center;font-weight:900;font-size:17px;line-height:1.2}
+  .num small{display:block;font-size:11px;font-weight:500;color:var(--sub)}
+  .num.on{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+  .num.on small{color:var(--ok)}
+  .legend{font-size:12px;color:var(--sub);margin-top:10px}
   .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1c2333;color:#fff;padding:9px 16px;border-radius:999px;font-size:14px;opacity:0;transition:.2s;pointer-events:none;z-index:99}
   .toast.show{opacity:1}
   .login{max-width:420px;margin:60px auto;text-align:center}
@@ -231,6 +237,9 @@ function dateRange(ev) {
 // ---------- 상태 ----------
 let user = null, events = [], cur = null, tab = 'pre', surveys = [], rcount = {};
 let plist = null, pcount = 0, ldraft = null;
+let safeties = [], vmap = {};
+const PLACES = { home: '집에서 가족과', class: '교실에서', alone: '혼자서', teacher: '선생님 확인' };
+const PLACE_SHORT = { home: '가정', class: '교실', alone: '혼자', teacher: '확인' };
 
 function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('show'), 1800); }
 function openModal(html, wide) { $('#md').className = 'md' + (wide ? ' wide' : ''); $('#md').innerHTML = '<button class="x noprint" data-act="close">×</button>' + html; $('#ov').classList.add('show'); }
@@ -335,6 +344,10 @@ async function openEvent(id, keepTab) {
   if (!keepTab) { plist = null; pcount = 0; }
   renderEvent();
   plist = await S.getList(id, 'student');
+  safeties = await S.listSafety(id);
+  safeties.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+  vmap = {};
+  await Promise.all(safeties.map(async s => { vmap[s.id] = await S.listViews(id, s.id); }));
   pcount = plist ? await S.countChecks(id, 'student') : 0;
   surveys = await S.listSurveys(id);
   surveys.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
@@ -389,9 +402,9 @@ function preTab() {
     </div>
     <div style="margin-top:10px"><button class="btn sm" data-act="add-task">+ 업무 더하기</button></div>
   </div>
+  ${safetySection()}
   ${packSection()}
   <div class="sec"><h3>곧 들어올 기능</h3><div class="soon">
-    <div class="card"><b>안전 교육</b><span>영상 시청 후 번호 체크, 실시 기록 남기기</span></div>
     <div class="card"><b>사전 조사</b><span>모둠 QR로 조사 내용 받기</span></div>
   </div></div>`;
 }
@@ -670,6 +683,129 @@ async function downloadCsv(sid) {
   a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
+// ---------- 안전 교육 ----------
+function viewStats(s) {
+  const vs = vmap[s.id] || [], by = {};
+  vs.forEach(v => { by[v.place] = (by[v.place] || 0) + 1; });
+  const doneSet = new Set(vs.map(v => Number(v.n)));
+  const missing = [];
+  for (let i = 1; i <= s.total; i++) if (!doneSet.has(i)) missing.push(i);
+  return { n: doneSet.size, by, missing };
+}
+function safetySection() {
+  const cards = safeties.map(s => {
+    const st = viewStats(s), pct = s.total ? Math.round(st.n / s.total * 100) : 0;
+    const parts = Object.keys(PLACES).filter(k => st.by[k]).map(k => `${PLACE_SHORT[k]} ${st.by[k]}`).join(' · ');
+    return `<div class="card svc">
+      <div><span class="badge ${s.open ? 'ok' : 'gray'}">${s.open ? '받는 중' : '마감'}</span>
+        <span class="badge">${st.n}/${s.total}명 시청</span>
+        <h3 style="margin:8px 0 2px;font-size:16px">${esc(s.title)}</h3>
+        <div class="meta">영상 ${s.videos.length}개${parts ? ' · ' + parts : ''}${s.memo ? ' · ' + esc(s.memo) : ''}</div>
+        <div class="bar"><i style="width:${pct}%"></i></div>
+        ${st.missing.length && st.missing.length <= 12 ? `<div class="meta" style="margin-top:4px">아직 안 본 번호: ${st.missing.join(', ')}</div>` : ''}</div>
+      <div class="acts">
+        <button class="btn sm pri" data-act="sf-qr" data-id="${s.id}">QR·인쇄</button>
+        <button class="btn sm" data-act="sf-board" data-id="${s.id}">번호 현황</button>
+        <button class="btn sm" data-act="sf-copy" data-id="${s.id}">기록 복사</button>
+        <button class="btn sm" data-act="sf-open" data-id="${s.id}">${s.open ? '마감하기' : '다시 열기'}</button>
+        <button class="btn sm" data-act="sf-edit" data-id="${s.id}">고치기</button>
+        <button class="btn sm warn" data-act="sf-del" data-id="${s.id}">지우기</button>
+      </div></div>`;
+  }).join('');
+  return `<div class="sec">
+    <div class="rowb"><h3 style="margin:0;font-size:16px">안전 교육</h3><button class="btn pri sm" data-act="sf-new">+ 안전 교육</button></div>
+    ${cards ? `<div class="grid" style="grid-template-columns:1fr">${cards}</div>`
+      : `<div class="card empty" style="padding:28px 20px"><b>아직 안전 교육이 없어요</b>영상 주소를 올려 두면 학생이 QR로 들어와 보고, 자기 번호를 눌러 시청을 체크해요.<br>가정에서 부모님과 함께 보거나 교실에서 함께 본 기록이 그대로 남아요.</div>`}
+  </div>`;
+}
+function guessTotal() { const m = String(cur.target || '').match(/(\d+)\s*명/); return m ? Number(m[1]) : 25; }
+function safetyForm(s) {
+  const isNew = !s;
+  s = s || { title: '체험학습 안전 교육', videos: [], total: guessTotal(), memo: '' };
+  openModal(`<h3>${isNew ? '새 안전 교육' : '안전 교육 고치기'}</h3>
+    <label class="f">제목</label><input class="in" id="sf-title" value="${esc(s.title)}" placeholder="예: 버스 안전·숙소 화재 대피">
+    <label class="f">영상 주소 (한 줄에 하나씩)</label>
+    <textarea class="in" id="sf-videos" rows="3" placeholder="https://www.youtube.com/watch?v=...">${esc(s.videos.join('\n'))}</textarea>
+    <div class="hint">유튜브 주소는 학생 화면에서 바로 재생돼요. 다른 주소는 "영상 보러 가기" 버튼으로 열려요.</div>
+    <div class="two">
+      <div><label class="f">학생 수 (번호 1번부터)</label><input class="in" type="number" min="1" max="200" id="sf-total" value="${s.total}"></div>
+      <div><label class="f">교실 시청 계획·메모</label><input class="in" id="sf-memo" value="${esc(s.memo)}" placeholder="예: 12.8(화) 3교시 교실에서 함께"></div>
+    </div>
+    <div class="note">학생은 이름 대신 번호만 눌러요. 교실에서 함께 본 학생은 '번호 현황'에서 선생님이 직접 체크할 수 있어요.</div>
+    <div class="mact"><div class="sp"></div><button class="btn" data-act="close">취소</button><button class="btn pri" data-act="sf-save" data-id="${s.id || ''}">${isNew ? '만들기' : '저장'}</button></div>`);
+  $('#sf-title').focus();
+}
+async function saveSafetyForm(id) {
+  const title = $('#sf-title').value.trim();
+  const videos = [...new Set($('#sf-videos').value.split('\n').map(x => x.trim()).filter(Boolean))];
+  const total = Math.round(Number($('#sf-total').value));
+  if (!title) return toast('제목을 적어 주세요');
+  if (!videos.length) return toast('영상 주소를 하나 이상 넣어 주세요');
+  if (videos.some(v => !/^https?:\/\//.test(v))) return toast('영상 주소는 https:// 로 시작해야 해요');
+  if (!(total >= 1 && total <= 200)) return toast('학생 수를 1~200 사이로 적어 주세요');
+  const old = id ? safeties.find(x => x.id === id) : null;
+  if (old && total < old.total && (vmap[id] || []).some(v => Number(v.n) > total) && !confirm('줄인 학생 수보다 큰 번호의 체크가 있어요. 그래도 저장할까요?')) return;
+  const s = { id: id || S.newId(), title, videos, total, memo: $('#sf-memo').value.trim(), open: old ? !!old.open : true,
+    owner: user.uid, eventTitle: cur.title, createdAt: old ? old.createdAt : Date.now(), updatedAt: Date.now() };
+  await S.saveSafety(cur.id, s);
+  closeModal(); await openEvent(cur.id, true); toast(old ? '저장했어요' : '안전 교육을 만들었어요');
+}
+function safetyQR(id) {
+  const s = safeties.find(x => x.id === id);
+  const u = new URL('safety.html', location.href);
+  u.hash = ''; u.search = `?e=${encodeURIComponent(cur.id)}&s=${encodeURIComponent(id)}`;
+  qrModal({ url: u.toString(), title: s.title, sub: `${cur.title} · 영상을 보고 자기 번호를 눌러 주세요`,
+    note: s.open ? '' : '지금은 마감 상태라 학생이 체크할 수 없어요.',
+    extra: `<div class="pl" style="display:block"><b>가정 안내</b><ul><li>휴대폰 카메라로 QR을 찍으면 안전 교육 영상이 열려요.</li><li>영상은 부모님과 함께 끝까지 봐 주세요.</li><li>다 보면 '어디서 봤는지'를 고르고 자기 번호를 눌러요.</li>${s.memo ? `<li>${esc(s.memo)}</li>` : ''}</ul></div>` });
+}
+function safetyBoard(id) {
+  const s = safeties.find(x => x.id === id);
+  const vs = {}; (vmap[id] || []).forEach(v => { vs[Number(v.n)] = v; });
+  const st = viewStats(s);
+  let nums = '';
+  for (let i = 1; i <= s.total; i++) {
+    const v = vs[i];
+    nums += `<button class="num ${v ? 'on' : ''}" data-act="sf-num" data-id="${id}" data-n="${i}">${i}<small>${v ? PLACE_SHORT[v.place] || '완료' : '아직'}</small></button>`;
+  }
+  openModal(`<h3>${esc(s.title)} 번호 현황</h3>
+    <div><span class="badge">${st.n}/${s.total}명 시청</span> ${Object.keys(PLACES).filter(k => st.by[k]).map(k => `<span class="badge gray">${PLACES[k]} ${st.by[k]}</span>`).join(' ')}</div>
+    <div class="nums">${nums}</div>
+    <div class="legend">'아직'인 번호를 누르면 선생님 확인으로 체크돼요 (교실에서 함께 본 학생). 체크된 번호를 누르면 취소할 수 있어요.</div>
+    <div class="mact"><button class="btn" data-act="sf-board-refresh" data-id="${id}">새로고침</button><div class="sp"></div>
+      <button class="btn pri" data-act="sf-copy" data-id="${id}">기록 복사</button></div>`, true);
+}
+async function toggleNum(id, n) {
+  const has = (vmap[id] || []).some(v => Number(v.n) === n);
+  if (has) {
+    if (!confirm(`${n}번 체크를 취소할까요?`)) return;
+    await S.removeView(cur.id, id, n);
+  } else {
+    try { await S.addView(cur.id, id, n, 'teacher', user.uid); }
+    catch (e) { if (!String(e.message).includes('already')) throw e; }
+  }
+  vmap[id] = await S.listViews(cur.id, id);
+  safetyBoard(id); renderEvent();
+}
+async function copySafetyRecord(id) {
+  vmap[id] = await S.listViews(cur.id, id);
+  const s = safeties.find(x => x.id === id), st = viewStats(s);
+  const t = today();
+  const lines = [
+    '[안전 교육 실시 기록]',
+    `체험학습: ${cur.title} (${dateRange(cur)})`,
+    `교육 내용: ${s.title}`,
+    `교육 방법: 영상 시청 (가정에서 보호자와 함께 시청 안내${s.memo ? ', ' + s.memo : ''})`,
+    ...s.videos.map((v, i) => `영상 ${i + 1}: ${v}`),
+    `시청 학생: ${st.n}명 / ${s.total}명` + (st.n ? ` (${Object.keys(PLACES).filter(k => st.by[k]).map(k => `${PLACES[k]} ${st.by[k]}명`).join(', ')})` : ''),
+    `아직 안 본 번호: ${st.missing.length ? st.missing.join(', ') : '없음'}`,
+    `기록한 날: ${t.getFullYear()}. ${t.getMonth() + 1}. ${t.getDate()}.`,
+  ];
+  const text = lines.join('\n');
+  try { await navigator.clipboard.writeText(text); toast('실시 기록을 복사했어요. 보고서에 붙여 넣으면 돼요'); }
+  catch (e) { openModal(`<h3>실시 기록</h3><textarea class="in" rows="10">${esc(text)}</textarea><div class="hint">복사가 막혀 있어 글을 보여 드려요. 직접 복사해 주세요.</div>`); }
+  renderEvent();
+}
+
 // ---------- 이벤트 연결 ----------
 document.addEventListener('click', async ev => {
   const el = ev.target.closest('[data-act]');
@@ -724,6 +860,20 @@ document.addEventListener('click', async ev => {
       }
       case 'qr': showQR(id); break;
       case 'pack-start-s': await startStudentList(); break;
+      case 'sf-new': safetyForm(); break;
+      case 'sf-edit': safetyForm(safeties.find(x => x.id === id)); break;
+      case 'sf-save': await saveSafetyForm(id); break;
+      case 'sf-qr': safetyQR(id); break;
+      case 'sf-board': safetyBoard(id); break;
+      case 'sf-board-refresh': vmap[id] = await S.listViews(cur.id, id); safetyBoard(id); renderEvent(); break;
+      case 'sf-num': await toggleNum(id, Number(el.dataset.n)); break;
+      case 'sf-copy': await copySafetyRecord(id); break;
+      case 'sf-open': { const x = safeties.find(y => y.id === id); x.open = !x.open; x.updatedAt = Date.now(); await S.saveSafety(cur.id, x); renderEvent(); toast(x.open ? '다시 받기 시작했어요' : '마감했어요'); break; }
+      case 'sf-del': {
+        const x = safeties.find(y => y.id === id);
+        if (!confirm(`'${x.title}'과(와) 시청 체크 ${(vmap[id] || []).length}개를 지울까요?`)) return;
+        await S.deleteSafety(cur.id, id); await openEvent(cur.id, true); toast('지웠어요'); break;
+      }
       case 'pack-start-t': cur.teacherItems = packItems(PACK_TEACHER, true); renderEvent(); await saveCur(); toast('교사 준비물 목록을 만들었어요'); break;
       case 'pack-edit': listForm(el.dataset.kind); break;
       case 'pack-save': await saveListForm(); break;

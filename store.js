@@ -44,6 +44,12 @@
         for (const c of cs.docs) await c.ref.delete();
         await l.ref.delete();
       }
+      const sf = await evRef(id).collection('safety').get();
+      for (const s of sf.docs) {
+        const vs = await s.ref.collection('views').get();
+        for (const v of vs.docs) await v.ref.delete();
+        await s.ref.delete();
+      }
       await evRef(id).delete();
     };
     // 준비물 목록 (학생용, QR로 공유)
@@ -54,6 +60,30 @@
     S.hasChecked = async (eid, lid, uid) => (await lsDoc(eid, lid).collection('checks').doc(uid).get()).exists;
     S.submitCheck = async (eid, lid, uid) =>
       lsDoc(eid, lid).collection('checks').doc(uid).set({ at: firebase.firestore.FieldValue.serverTimestamp() });
+    // 안전 교육 (영상 시청 + 번호 체크)
+    const sfCol = eid => evRef(eid).collection('safety');
+    const vwCol = (eid, sid) => sfCol(eid).doc(sid).collection('views');
+    S.listSafety = async eid => docs(await sfCol(eid).get());
+    S.getSafety = async (eid, sid) => { const d = await sfCol(eid).doc(sid).get(); return d.exists ? { id: d.id, ...d.data() } : null; };
+    S.saveSafety = async (eid, s) => { const { id, ...rest } = s; await sfCol(eid).doc(id).set(rest); };
+    S.deleteSafety = async (eid, sid) => {
+      const vs = await vwCol(eid, sid).get();
+      for (const v of vs.docs) await v.ref.delete();
+      await sfCol(eid).doc(sid).delete();
+    };
+    S.listViews = async (eid, sid) => docs(await vwCol(eid, sid).get());
+    S.addView = async (eid, sid, n, place, by) => {
+      try {
+        await vwCol(eid, sid).doc(String(n)).set({ n, place, by, at: firebase.firestore.FieldValue.serverTimestamp() });
+      } catch (e) {
+        if (e.code === 'permission-denied') {
+          const ex = await vwCol(eid, sid).doc(String(n)).get().catch(() => null);
+          if (ex && ex.exists) throw new Error('already');
+        }
+        throw e;
+      }
+    };
+    S.removeView = async (eid, sid, n) => vwCol(eid, sid).doc(String(n)).delete();
     S.listSurveys = async eid => docs(await svCol(eid).get());
     S.getSurvey = async (eid, sid) => {
       const d = await svCol(eid).doc(sid).get();
@@ -77,6 +107,7 @@
       try { d = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) {}
       d.events = d.events || {}; d.surveys = d.surveys || {}; d.responses = d.responses || {};
       d.lists = d.lists || {}; d.checks = d.checks || {};
+      d.safety = d.safety || {}; d.views = d.views || {};
       return d;
     };
     const save = d => localStorage.setItem(KEY, JSON.stringify(d));
@@ -95,7 +126,8 @@
       .filter(([, e]) => e.owner === uid).map(([id, e]) => ({ id, ...clone(e) }));
     S.saveEvent = async e => { const d = load(); const { id, ...rest } = e; d.events[id] = rest; save(d); };
     S.deleteEvent = async id => {
-      const d = load(); delete d.events[id]; delete d.surveys[id]; delete d.lists[id];
+      const d = load(); delete d.events[id]; delete d.surveys[id]; delete d.lists[id]; delete d.safety[id];
+      Object.keys(d.views).forEach(k => { if (k.startsWith(id + '|')) delete d.views[k]; });
       Object.keys(d.responses).forEach(k => { if (k.startsWith(id + '|')) delete d.responses[k]; });
       Object.keys(d.checks).forEach(k => { if (k.startsWith(id + '|')) delete d.checks[k]; });
       save(d);
@@ -110,6 +142,25 @@
       const d = load(); const k = eid + '|' + lid;
       if (!(d.lists[eid] || {})[lid]) throw new Error('nolist');
       d.checks[k] = d.checks[k] || {}; d.checks[k][uid] = { at: Date.now() }; save(d);
+    };
+    S.listSafety = async eid => Object.entries(load().safety[eid] || {}).map(([id, s]) => ({ id, ...clone(s) }));
+    S.getSafety = async (eid, sid) => { const s = (load().safety[eid] || {})[sid]; return s ? { id: sid, ...clone(s) } : null; };
+    S.saveSafety = async (eid, s) => {
+      const d = load(); const { id, ...rest } = s;
+      d.safety[eid] = d.safety[eid] || {}; d.safety[eid][id] = rest; save(d);
+    };
+    S.deleteSafety = async (eid, sid) => {
+      const d = load(); if (d.safety[eid]) delete d.safety[eid][sid]; delete d.views[eid + '|' + sid]; save(d);
+    };
+    S.listViews = async (eid, sid) => Object.entries(load().views[eid + '|' + sid] || {}).map(([id, v]) => ({ id, ...clone(v) }));
+    S.addView = async (eid, sid, n, place, by) => {
+      const d = load(); const k = eid + '|' + sid;
+      d.views[k] = d.views[k] || {};
+      if (d.views[k][n]) throw new Error('already');
+      d.views[k][n] = { n, place, by, at: Date.now() }; save(d);
+    };
+    S.removeView = async (eid, sid, n) => {
+      const d = load(); const k = eid + '|' + sid; if (d.views[k]) delete d.views[k][n]; save(d);
     };
     S.listSurveys = async eid => Object.entries(load().surveys[eid] || {}).map(([id, s]) => ({ id, ...clone(s) }));
     S.getSurvey = async (eid, sid) => {

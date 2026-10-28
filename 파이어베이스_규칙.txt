@@ -50,6 +50,28 @@ service cloud.firestore {
           allow delete: if ownsEvent(eid);
         }
       }
+
+      // 안전 교육: 학생도 읽을 수 있음(영상 주소·안내만), 고치는 건 선생님만
+      match /safety/{sid} {
+        allow read: if signedIn();
+        allow create, update: if ownsEvent(eid) && request.resource.data.owner == request.auth.uid;
+        allow delete: if ownsEvent(eid);
+
+        // 시청 체크: 번호마다 하나, 번호와 시청 장소만 저장 (이름 없음)
+        match /views/{n} {
+          allow read: if signedIn();
+          allow create: if signedIn()
+            && request.resource.data.keys().hasOnly(['n', 'place', 'by', 'at'])
+            && request.resource.data.by == request.auth.uid
+            && request.resource.data.n is int
+            && string(request.resource.data.n) == n
+            && request.resource.data.n >= 1
+            && request.resource.data.n <= get(/databases/$(database)/documents/events/$(eid)/safety/$(sid)).data.total
+            && request.resource.data.place in ['home', 'class', 'alone', 'teacher']
+            && (ownsEvent(eid) || get(/databases/$(database)/documents/events/$(eid)/safety/$(sid)).data.open == true);
+          allow delete: if ownsEvent(eid);
+        }
+      }
     }
   }
 }
