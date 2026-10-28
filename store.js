@@ -44,6 +44,12 @@
         for (const c of cs.docs) await c.ref.delete();
         await l.ref.delete();
       }
+      const rl = await evRef(id).collection('roll').get();
+      for (const r of rl.docs) {
+        const ms = await r.ref.collection('marks').get();
+        for (const m of ms.docs) await m.ref.delete();
+        await r.ref.delete();
+      }
       const sf = await evRef(id).collection('safety').get();
       for (const s of sf.docs) {
         const vs = await s.ref.collection('views').get();
@@ -84,6 +90,26 @@
       }
     };
     S.removeView = async (eid, sid, n) => vwCol(eid, sid).doc(String(n)).delete();
+    // 당일 인원 점검
+    const rlDoc = eid => evRef(eid).collection('roll').doc('main');
+    const mkCol = eid => rlDoc(eid).collection('marks');
+    S.getRoll = async eid => { const d = await rlDoc(eid).get(); return d.exists ? d.data() : null; };
+    S.saveRoll = async (eid, data) => rlDoc(eid).set(data);
+    S.listMarks = async eid => docs(await mkCol(eid).get());
+    S.watchMarks = (eid, cb, onErr) => mkCol(eid).onSnapshot(snap => cb(docs(snap)), e => onErr && onErr(e));
+    S.addMark = async (eid, slot, n, src, by) => {
+      try {
+        await mkCol(eid).doc(slot + '_' + n).set({ slot, n, src, by, at: firebase.firestore.FieldValue.serverTimestamp() });
+      } catch (e) {
+        if (e.code === 'permission-denied') {
+          const ex = await mkCol(eid).doc(slot + '_' + n).get().catch(() => null);
+          if (ex && ex.exists) throw new Error('already');
+          throw new Error('closed');
+        }
+        throw e;
+      }
+    };
+    S.removeMark = async (eid, slot, n) => mkCol(eid).doc(slot + '_' + n).delete();
     S.listSurveys = async eid => docs(await svCol(eid).get());
     S.getSurvey = async (eid, sid) => {
       const d = await svCol(eid).doc(sid).get();
@@ -108,6 +134,7 @@
       d.events = d.events || {}; d.surveys = d.surveys || {}; d.responses = d.responses || {};
       d.lists = d.lists || {}; d.checks = d.checks || {};
       d.safety = d.safety || {}; d.views = d.views || {};
+      d.roll = d.roll || {}; d.marks = d.marks || {};
       return d;
     };
     const save = d => localStorage.setItem(KEY, JSON.stringify(d));
@@ -126,7 +153,7 @@
       .filter(([, e]) => e.owner === uid).map(([id, e]) => ({ id, ...clone(e) }));
     S.saveEvent = async e => { const d = load(); const { id, ...rest } = e; d.events[id] = rest; save(d); };
     S.deleteEvent = async id => {
-      const d = load(); delete d.events[id]; delete d.surveys[id]; delete d.lists[id]; delete d.safety[id];
+      const d = load(); delete d.events[id]; delete d.surveys[id]; delete d.lists[id]; delete d.safety[id]; delete d.roll[id]; delete d.marks[id];
       Object.keys(d.views).forEach(k => { if (k.startsWith(id + '|')) delete d.views[k]; });
       Object.keys(d.responses).forEach(k => { if (k.startsWith(id + '|')) delete d.responses[k]; });
       Object.keys(d.checks).forEach(k => { if (k.startsWith(id + '|')) delete d.checks[k]; });
@@ -188,6 +215,23 @@
       d.responses[k][uid] = { answers, at: Date.now() };
       save(d);
     };
+    S.getRoll = async eid => { const r = load().roll[eid]; return r ? clone(r) : null; };
+    S.saveRoll = async (eid, data) => { const d = load(); d.roll[eid] = data; save(d); };
+    S.listMarks = async eid => Object.entries(load().marks[eid] || {}).map(([id, m]) => ({ id, ...clone(m) }));
+    S.watchMarks = (eid, cb) => {
+      let last = '';
+      const run = async () => { const m = await S.listMarks(eid); const k = JSON.stringify(m); if (k !== last) { last = k; cb(m); } };
+      run(); const t = setInterval(run, 1500); return () => clearInterval(t);
+    };
+    S.addMark = async (eid, slot, n, src, by) => {
+      const d = load(); const r = d.roll[eid]; const id = slot + '_' + n;
+      d.marks[eid] = d.marks[eid] || {};
+      if (d.marks[eid][id]) throw new Error('already');
+      const sl = r && r.slots[slot];
+      if (src === 'student' && (!sl || Date.now() < sl.openAt || Date.now() > sl.closeAt)) throw new Error('closed');
+      d.marks[eid][id] = { slot, n, src, by, at: Date.now() }; save(d);
+    };
+    S.removeMark = async (eid, slot, n) => { const d = load(); if (d.marks[eid]) delete d.marks[eid][slot + '_' + n]; save(d); };
   }
   window.Store = S;
 })();

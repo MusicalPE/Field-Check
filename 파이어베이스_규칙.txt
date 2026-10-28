@@ -6,6 +6,9 @@ service cloud.firestore {
     function isTeacher() {
       return signedIn() && request.auth.token.firebase.sign_in_provider != 'anonymous';
     }
+    function rollOf(eid, rid) {
+      return get(/databases/$(database)/documents/events/$(eid)/roll/$(rid)).data;
+    }
     function ownsEvent(eid) {
       return signedIn() &&
         get(/databases/$(database)/documents/events/$(eid)).data.owner == request.auth.uid;
@@ -47,6 +50,32 @@ service cloud.firestore {
           allow create: if signedIn() && request.auth.uid == rid
             && request.resource.data.keys().hasOnly(['at']);
           allow read: if signedIn() && (request.auth.uid == rid || ownsEvent(eid));
+          allow delete: if ownsEvent(eid);
+        }
+      }
+
+      // 당일 인원 점검: 학생도 읽을 수 있음(점검 시간표만), 고치는 건 선생님만
+      match /roll/{rid} {
+        allow read: if signedIn();
+        allow create, update: if ownsEvent(eid) && request.resource.data.owner == request.auth.uid;
+        allow delete: if ownsEvent(eid);
+
+        // 출석 표시: 점검마다 번호 하나씩. 학생은 정해진 시간 안에서만, 선생님은 언제나
+        match /marks/{mid} {
+          allow read: if signedIn();
+          allow create: if signedIn()
+            && request.resource.data.keys().hasOnly(['slot', 'n', 'src', 'by', 'at'])
+            && request.resource.data.by == request.auth.uid
+            && request.resource.data.n is int
+            && request.resource.data.n >= 1
+            && request.resource.data.slot is string
+            && mid == request.resource.data.slot + '_' + string(request.resource.data.n)
+            && request.resource.data.slot in rollOf(eid, rid).slots
+            && request.resource.data.n <= rollOf(eid, rid).total
+            && ((request.resource.data.src == 'teacher' && ownsEvent(eid))
+              || (request.resource.data.src == 'student'
+                && request.time.toMillis() >= rollOf(eid, rid).slots[request.resource.data.slot].openAt
+                && request.time.toMillis() <= rollOf(eid, rid).slots[request.resource.data.slot].closeAt));
           allow delete: if ownsEvent(eid);
         }
       }

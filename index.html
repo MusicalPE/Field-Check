@@ -122,6 +122,14 @@
   .num small{display:block;font-size:11px;font-weight:500;color:var(--sub)}
   .num.on{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
   .num.on small{color:var(--ok)}
+  .num.tch{background:var(--pri-soft);border-color:var(--pri);color:var(--pri)}
+  .num.tch small{color:var(--pri)}
+  .rollrow{cursor:pointer}
+  .rollrow:hover{background:#f7f8fb}
+  .rollrow.now{background:var(--ok-soft)}
+  .rtime{font-weight:900;font-size:17px;min-width:56px;color:var(--pri)}
+  .rrowf{display:grid;grid-template-columns:1.3fr 1fr 2fr auto;gap:6px;margin-bottom:6px;align-items:center}
+  @media (max-width:560px){.rrowf{grid-template-columns:1fr 1fr;}.rrowf input[data-rf=label]{grid-column:1/2}}
   .legend{font-size:12px;color:var(--sub);margin-top:10px}
   .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1c2333;color:#fff;padding:9px 16px;border-radius:999px;font-size:14px;opacity:0;transition:.2s;pointer-events:none;z-index:99}
   .toast.show{opacity:1}
@@ -243,12 +251,13 @@ function dateRange(ev) {
 let user = null, events = [], cur = null, tab = 'pre', surveys = [], rcount = {};
 let plist = null, pcount = 0, ldraft = null;
 let safeties = [], vmap = {};
+let roll = null, marks = [], unwatch = null;
 const PLACES = { home: '집에서 가족과', class: '교실에서', alone: '혼자서', teacher: '선생님 확인' };
 const PLACE_SHORT = { home: '가정', class: '교실', alone: '혼자', teacher: '확인' };
 
 function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('show'), 1800); }
 function openModal(html, wide) { $('#md').className = 'md' + (wide ? ' wide' : ''); $('#md').innerHTML = '<button class="x noprint" data-act="close">×</button>' + html; $('#ov').classList.add('show'); }
-function closeModal() { $('#ov').classList.remove('show'); $('#md').innerHTML = ''; draft = null; ldraft = null; }
+function closeModal() { $('#ov').classList.remove('show'); $('#md').innerHTML = ''; draft = null; ldraft = null; rdraft = null; }
 
 // ---------- 시작 ----------
 if (S.mode === 'demo') $('#mode').hidden = false;
@@ -277,6 +286,7 @@ async function loadEvents() {
 
 // ---------- 홈 ----------
 function renderHome() {
+  stopWatch(); roll = null; marks = [];
   cur = null; history.replaceState(null, '', location.pathname + location.search);
   const t = today();
   const up = events.filter(e => parseD(e.endDate || e.date) >= t);
@@ -349,6 +359,9 @@ async function openEvent(id, keepTab) {
   if (!keepTab) { plist = null; pcount = 0; }
   renderEvent();
   plist = await S.getList(id, 'student');
+  roll = await S.getRoll(id);
+  marks = roll ? await S.listMarks(id) : [];
+  if (!keepTab) startWatch();
   safeties = await S.listSafety(id);
   safeties.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
   vmap = {};
@@ -509,13 +522,6 @@ function packQR() {
     sub: `${dateRange(cur)} · 휴대폰 카메라로 찍으면 체크리스트가 열려요`,
     extra: `<div class="pl">${list}</div>`,
   });
-}
-
-function dayTab() {
-  return `<div class="sec"><h3>곧 들어올 기능</h3><div class="soon">
-    <div class="card"><b>인원 점검</b><span>탑승·이동·점호 때 모둠별로 빠르게 확인</span></div>
-    <div class="card"><b>조별 활동지</b><span>모둠 QR로 현장 미션 해결·사진 올리기</span></div>
-  </div></div>`;
 }
 
 function postTab() {
@@ -829,6 +835,174 @@ async function copySafetyRecord(id) {
   renderEvent();
 }
 
+// ---------- 당일 인원 점검 ----------
+const pad2 = n => String(n).padStart(2, '0');
+const ymd = d => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+function tripDays() {
+  const out = [], a = parseD(cur.date), b = parseD(cur.endDate || cur.date);
+  for (let d = new Date(a); d <= b && out.length < 14; d = addDays(d, 1)) out.push(ymd(d));
+  return out;
+}
+function defaultSlots() {
+  const days = tripDays(), list = [];
+  if (days.length === 1) {
+    [['08:30', '출발 전 (버스 탑승)'], ['12:30', '점심 후'], ['15:00', '학교 도착']].forEach(([t, l]) => list.push([days[0], t, l]));
+  } else days.forEach((d, i) => {
+    const last = i === days.length - 1;
+    const plan = i === 0 ? [['08:30', '출발 전 (버스 탑승)'], ['12:30', '점심 후'], ['17:00', '숙소 도착'], ['21:30', '숙소 점호']]
+      : last ? [['08:00', '아침 모임'], ['12:30', '점심 후'], ['15:30', '학교 도착']]
+      : [['08:00', '아침 모임'], ['12:30', '점심 후'], ['17:00', '숙소 도착'], ['21:30', '숙소 점호']];
+    plan.forEach(([t, l]) => list.push([d, t, l]));
+  });
+  return list.map(([date, time, label]) => ({ id: S.newId(), date, time, label }));
+}
+function slotTimes(sl, before, after) {
+  const [h, m] = sl.time.split(':').map(Number), d = parseD(sl.date);
+  d.setHours(h, m, 0, 0);
+  return { ...sl, openAt: d.getTime() - before * 60000, closeAt: d.getTime() + after * 60000 };
+}
+function buildRoll(slots, total, before, after) {
+  const map = {};
+  slots.forEach(sl => { map[sl.id] = slotTimes(sl, before, after); });
+  return { owner: user.uid, eventTitle: cur.title, total, before, after, slots: map,
+    createdAt: roll ? roll.createdAt : Date.now(), updatedAt: Date.now() };
+}
+const sortedSlots = () => roll ? Object.values(roll.slots).sort((a, b) => a.openAt - b.openAt) : [];
+const slotStatus = sl => { const now = Date.now(); return now < sl.openAt ? 'soon' : now > sl.closeAt ? 'past' : 'open'; };
+const slotMarks = id => marks.filter(m => m.slot === id);
+const slotName = sl => `${fmt(parseD(sl.date))} ${sl.time} ${sl.label}`;
+
+function startWatch() {
+  stopWatch();
+  if (!roll) return;
+  const id = cur.id;
+  unwatch = S.watchMarks(id, m => {
+    if (!cur || cur.id !== id) return;
+    marks = m;
+    if ($('#rollboard')) rollBoard($('#rollboard').dataset.slot);
+    if (tab === 'day') renderEvent();
+  }, e => console.error(e));
+}
+function stopWatch() { if (unwatch) { unwatch(); unwatch = null; } }
+
+function dayTab() {
+  const soon = `<div class="sec"><h3>곧 들어올 기능</h3><div class="soon">
+    <div class="card"><b>조별 활동지</b><span>모둠 QR로 현장 미션 해결·사진 올리기</span></div></div></div>`;
+  if (!roll) return `<div class="sec"><h3>인원 점검</h3><div class="card svc">
+      <div><div class="meta">버스 탑승, 점심 후, 숙소 점호처럼 정해진 시간마다 인원을 확인해요. 학생은 QR로 들어와 자기 번호를 누르고, 남은 번호는 선생님이 직접 확인해요.${cur.endDate ? ' 날짜마다 기본 점검 시간이 들어가요.' : ''}</div></div>
+      <div class="acts"><button class="btn sm pri" data-act="roll-start">기본 점검 시간으로 시작하기</button></div></div></div>${soon}`;
+  const days = {};
+  sortedSlots().forEach(sl => { (days[sl.date] = days[sl.date] || []).push(sl); });
+  const dayKeys = Object.keys(days).sort(), all = tripDays();
+  const blocks = dayKeys.map(d => {
+    const idx = all.indexOf(d);
+    const rows = days[d].map(sl => {
+      const st = slotStatus(sl), n = new Set(slotMarks(sl.id).map(m => Number(m.n))).size, left = roll.total - n;
+      const badge = st === 'open' ? '<span class="badge ok">지금 점검 중</span>' : st === 'soon' ? '<span class="badge gray">예정</span>' : '<span class="badge gray">지남</span>';
+      const cnt = st === 'soon' && !n ? '' : `<span class="badge ${left > 0 ? (st === 'soon' ? '' : 'warn') : 'ok'}">${n}/${roll.total}${left > 0 && st !== 'soon' ? ` · ${left}명 남음` : left <= 0 ? ' · 모두 확인' : ''}</span>`;
+      return `<div class="task rollrow ${st === 'open' ? 'now' : ''}" data-act="roll-board" data-id="${sl.id}">
+        <div class="rtime">${esc(sl.time)}</div>
+        <div class="tx"><div class="tt">${esc(sl.label)}</div><div class="tm">${badge} ${cnt}</div></div>
+        <span class="ib">번호표</span></div>`;
+    }).join('');
+    return `<div class="pg">${idx >= 0 ? idx + 1 + '일차 · ' : ''}${fmt(parseD(d))}</div>${rows}`;
+  }).join('');
+  return `<div class="sec">
+    <div class="rowb"><h3 style="margin:0;font-size:16px">인원 점검</h3>
+      <div class="acts" style="display:flex;gap:6px"><button class="btn sm pri" data-act="roll-qr">QR·인쇄</button><button class="btn sm" data-act="roll-edit">점검 시간 고치기</button></div></div>
+    <div class="meta" style="margin-bottom:8px">학생 ${roll.total}명 · 점검 시간 ${roll.before}분 전부터 ${roll.after}분 뒤까지 학생이 체크할 수 있어요. 번호표는 실시간으로 채워져요.</div>
+    <div class="card" style="padding:4px 4px 6px">${blocks || '<div class="empty">점검 시간이 없어요</div>'}</div>
+  </div>${soon}`;
+}
+
+async function startRoll() {
+  roll = buildRoll(defaultSlots(), guessTotal(), 10, 30);
+  await S.saveRoll(cur.id, roll);
+  marks = []; startWatch(); renderEvent(); toast('기본 점검 시간을 만들었어요');
+}
+
+function rollBoard(slotId) {
+  const sl = roll.slots[slotId];
+  if (!sl) return closeModal();
+  const ms = {}; slotMarks(slotId).forEach(m => { ms[Number(m.n)] = m; });
+  const n = Object.keys(ms).length, st = slotStatus(sl);
+  const bySt = slotMarks(slotId).filter(m => m.src === 'student').length;
+  let nums = '';
+  for (let i = 1; i <= roll.total; i++) {
+    const m = ms[i];
+    nums += `<button class="num ${m ? (m.src === 'teacher' ? 'tch' : 'on') : ''}" data-act="roll-num" data-id="${slotId}" data-n="${i}">${i}<small>${m ? (m.src === 'teacher' ? '확인' : '본인') : '아직'}</small></button>`;
+  }
+  const missing = []; for (let i = 1; i <= roll.total; i++) if (!ms[i]) missing.push(i);
+  const html = `<div id="rollboard" data-slot="${slotId}"><h3>${esc(slotName(sl))}</h3>
+    <div><span class="badge ${st === 'open' ? 'ok' : 'gray'}">${st === 'open' ? '지금 점검 중' : st === 'soon' ? '예정' : '지남'}</span>
+      <span class="badge ${missing.length ? 'warn' : 'ok'}">${n}/${roll.total}명 확인</span>
+      <span class="badge gray">학생 체크 ${bySt} · 선생님 확인 ${n - bySt}</span></div>
+    ${missing.length ? `<div class="meta" style="margin-top:8px">남은 번호: <b style="color:var(--warn)">${missing.join(', ')}</b></div>` : '<div class="meta" style="margin-top:8px;color:var(--ok);font-weight:700">모두 확인했어요</div>'}
+    <div class="nums">${nums}</div>
+    <div class="legend">'아직'인 번호를 누르면 선생님 확인으로 체크돼요. 체크된 번호를 누르면 취소할 수 있어요. 학생이 체크하면 바로 채워져요.</div></div>`;
+  if ($('#rollboard')) { $('#md').innerHTML = '<button class="x noprint" data-act="close">×</button>' + html; }
+  else openModal(html, true);
+}
+async function toggleRollNum(slotId, n) {
+  const has = slotMarks(slotId).some(m => Number(m.n) === n);
+  if (has) { if (!confirm(`${n}번 확인을 취소할까요?`)) return; await S.removeMark(cur.id, slotId, n); }
+  else { try { await S.addMark(cur.id, slotId, n, 'teacher', user.uid); } catch (e) { if (!String(e.message).includes('already')) throw e; } }
+  marks = await S.listMarks(cur.id); rollBoard(slotId); renderEvent();
+}
+
+let rdraft = null;
+function rollForm() {
+  rdraft = { total: roll.total, before: roll.before, after: roll.after, slots: sortedSlots().map(s => ({ id: s.id, date: s.date, time: s.time, label: s.label })) };
+  renderRollForm();
+}
+function renderRollForm() {
+  const days = tripDays();
+  const rows = rdraft.slots.map((s, i) => {
+    const opts = [...new Set([...days, s.date])].sort().map(d => `<option value="${d}" ${d === s.date ? 'selected' : ''}>${days.indexOf(d) >= 0 ? days.indexOf(d) + 1 + '일차 ' : ''}${fmt(parseD(d))}</option>`).join('');
+    return `<div class="rrowf"><select class="in" data-ri="${i}" data-rf="date">${opts}</select>
+      <input class="in" type="time" data-ri="${i}" data-rf="time" value="${s.time}">
+      <input class="in" data-ri="${i}" data-rf="label" value="${esc(s.label)}" placeholder="예: 버스 탑승">
+      <button class="ib" data-act="rs-del" data-i="${i}">빼기</button></div>`;
+  }).join('');
+  openModal(`<h3>점검 시간 고치기</h3>
+    <div class="two">
+      <div><label class="f">학생 수 (번호 1번부터)</label><input class="in" type="number" min="1" max="200" id="rl-total" value="${rdraft.total}"></div>
+      <div><label class="f">학생이 체크할 수 있는 때</label><div style="display:flex;gap:6px;align-items:center">
+        <input class="in" type="number" min="0" max="120" id="rl-before" value="${rdraft.before}" style="width:70px"><span class="meta">분 전부터</span>
+        <input class="in" type="number" min="5" max="240" id="rl-after" value="${rdraft.after}" style="width:70px"><span class="meta">분 뒤까지</span></div></div>
+    </div>
+    <label class="f">점검 시간</label>${rows}
+    <button class="btn sm" data-act="rs-add">+ 점검 시간 더하기</button>
+    <div class="hint" style="margin-top:8px">이미 체크된 기록은 점검 시간을 고쳐도 그대로 남아요. 점검을 빼면 그 점검의 기록은 목록에서 보이지 않아요.</div>
+    <div class="mact"><div class="sp"></div><button class="btn" data-act="close">취소</button><button class="btn pri" data-act="rs-save">저장</button></div>`, true);
+}
+async function saveRollForm() {
+  const total = Math.round(Number($('#rl-total').value)), before = Math.round(Number($('#rl-before').value)), after = Math.round(Number($('#rl-after').value));
+  if (!(total >= 1 && total <= 200)) return toast('학생 수를 1~200 사이로 적어 주세요');
+  if (!(before >= 0 && before <= 120) || !(after >= 5 && after <= 240)) return toast('체크할 수 있는 때를 다시 확인해 주세요');
+  if (!rdraft.slots.length) return toast('점검 시간을 하나 이상 넣어 주세요');
+  for (const [i, s] of rdraft.slots.entries()) {
+    s.label = s.label.trim();
+    if (!s.time) return toast(`${i + 1}번째 점검 시간을 적어 주세요`);
+    if (!s.label) return toast(`${i + 1}번째 점검 이름을 적어 주세요`);
+  }
+  roll = buildRoll(rdraft.slots, total, before, after);
+  await S.saveRoll(cur.id, roll);
+  rdraft = null; closeModal(); renderEvent(); toast('저장했어요');
+}
+function rollQR() {
+  const u = new URL('rollcall.html', location.href);
+  u.hash = ''; u.search = `?e=${encodeURIComponent(cur.id)}`;
+  const days = {}, all = tripDays();
+  sortedSlots().forEach(sl => { (days[sl.date] = days[sl.date] || []).push(sl); });
+  const list = Object.keys(days).sort().map(d => `<div class="pl-g"><b>${all.indexOf(d) >= 0 ? all.indexOf(d) + 1 + '일차 ' : ''}${fmt(parseD(d))}</b><ul>${days[d].map(s => `<li>${esc(s.time)} ${esc(s.label)}</li>`).join('')}</ul></div>`).join('');
+  qrModal({ url: u.toString(), title: `${cur.title} 인원 점검`,
+    sub: `점검 시간이 되면 이 QR로 들어와 내 번호를 눌러요 · ${roll.before}분 전부터 ${roll.after}분 뒤까지`,
+    extra: `<div class="pl">${list}</div>` });
+}
+
+setInterval(() => { if (cur && tab === 'day' && !$('#ov').classList.contains('show')) renderEvent(); }, 30000);
+
 // ---------- 이벤트 연결 ----------
 document.addEventListener('click', async ev => {
   const el = ev.target.closest('[data-act]');
@@ -884,6 +1058,14 @@ document.addEventListener('click', async ev => {
       case 'qr': showQR(id); break;
       case 'pack-start-s': await startStudentList(); break;
       case 'sf-new': safetyForm(); break;
+      case 'roll-start': await startRoll(); break;
+      case 'roll-board': rollBoard(id); break;
+      case 'roll-num': await toggleRollNum(id, Number(el.dataset.n)); break;
+      case 'roll-edit': rollForm(); break;
+      case 'roll-qr': rollQR(); break;
+      case 'rs-add': { const d = tripDays(); rdraft.slots.push({ id: S.newId(), date: d[d.length - 1], time: '12:00', label: '' }); renderRollForm(); break; }
+      case 'rs-del': rdraft.slots.splice(Number(el.dataset.i), 1); renderRollForm(); break;
+      case 'rs-save': await saveRollForm(); break;
       case 'sf-edit': safetyForm(safeties.find(x => x.id === id)); break;
       case 'sf-save': await saveSafetyForm(id); break;
       case 'sf-qr': safetyQR(id); break;
@@ -918,6 +1100,11 @@ document.addEventListener('click', async ev => {
 
 document.addEventListener('input', ev => {
   const t = ev.target;
+  if (rdraft) {
+    if (t.dataset.ri !== undefined) rdraft.slots[Number(t.dataset.ri)][t.dataset.rf] = t.value;
+    if (t.id === 'rl-total') rdraft.total = t.value; if (t.id === 'rl-before') rdraft.before = t.value; if (t.id === 'rl-after') rdraft.after = t.value;
+    return;
+  }
   if (ldraft && t.dataset.lc !== undefined) {
     const c = ldraft.cats[Number(t.dataset.lc)];
     if (t.dataset.lf === 'leave') c.leave = t.checked; else c[t.dataset.lf] = t.value;
