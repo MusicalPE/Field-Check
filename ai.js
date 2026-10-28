@@ -39,7 +39,7 @@ function parseJSON(text) {
         for (const useThink of think ? [true, false] : [false]) {
           try {
             const generationConfig = { responseMimeType: 'application/json', temperature, ...(useThink ? { thinkingConfig: { thinkingBudget: 0 } } : {}) };
-            const res = await getGenerativeModel(ai, { model: name, generationConfig }).generateContent(prompt);
+            const res = await getGenerativeModel(ai, { model: name, generationConfig }, { timeout: 70000 }).generateContent(prompt);
             return parseJSON(res.response.text());
           } catch (e) {
             last = e; const m = String(e && e.message || e);
