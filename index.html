@@ -4,6 +4,16 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#3D6B35">
+<meta name="description" content="현장체험학습·수학여행 준비부터 당일 인원 점검, 사후 설문까지 선생님이 함께 챙기는 업무 도우미">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="체험첵! Field-Check!">
+<meta property="og:title" content="체험첵! Field-Check!">
+<meta property="og:description" content="현장체험학습·수학여행 준비부터 당일 인원 점검, 사후 설문까지 선생님이 함께 챙기는 업무 도우미">
+<meta property="og:url" content="https://musicalpe.github.io/Field-Check/">
+<meta property="og:image" content="https://musicalpe.github.io/Field-Check/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
 <title>체험첵! Field-Check!</title>
 <link rel="icon" href="favicon-32.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -12,6 +22,15 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="체험첵!">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
+<script>
+/* 카카오톡 안 브라우저는 구글 로그인이 막히고 저장이 불안정해서, 휴대폰 기본 브라우저로 넘김 */
+(function(){
+  if (!/KAKAOTALK/i.test(navigator.userAgent)) return;
+  try{ if (sessionStorage.getItem("kakao-out")) return; sessionStorage.setItem("kakao-out", "1"); }catch(e){}
+  window.__kakaoOut = true;
+  location.href = "kakaotalk://web/openExternal?url=" + encodeURIComponent(location.href);
+})();
+</script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=Nanum+Gothic:wght@400;700;800&family=IBM+Plex+Mono:wght@500&display=swap">
 <style>
 /* 체험첵! 그림 톤: 숲 나뭇잎 초록, 맑은 하늘, 가죽 가방 갈색, 금빛 체크 (캠첵!·트립첵!과 같은 틀) */
@@ -141,7 +160,9 @@ h2{font-family:var(--f-display);font-weight:400;font-size:28px;margin:0;color:va
 .task input[type=checkbox]:checked{background:var(--pri);border-color:var(--pri)}
 .task input[type=checkbox]:checked::after{opacity:1}
 .task .tx{flex:1;min-width:0}
-.task .tt{font-weight:700;overflow-wrap:anywhere}
+.task .tt{font-weight:700;word-break:keep-all;overflow-wrap:break-word}
+.paren{display:inline-block;font-weight:400;color:var(--sub);font-size:.92em}
+.task:hover .pen{opacity:.85}
 .task.done .tt{text-decoration:line-through;color:var(--sub);font-weight:400}
 .task .tm{font-size:12px;color:var(--sub);display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:2px}
 .ib{border:0;background:transparent;color:var(--sub);font-size:13px;font-weight:700;padding:6px 8px;border-radius:8px;white-space:nowrap}
@@ -238,6 +259,28 @@ label.f{display:block;font-size:13px;font-weight:800;color:var(--sub);margin:12p
 .qrsm{padding:10px!important}
 @media (max-width:640px){.invite{grid-template-columns:1fr}.invite>div:first-child{display:flex;flex-direction:column;align-items:center}}
 .tabbar{display:none}
+.plans{display:flex;flex-direction:column;gap:12px}
+.mdays{display:flex;gap:6px;flex-wrap:wrap}
+.mday{border:1.5px solid var(--line);background:var(--soft);color:var(--sub);font-size:13.5px;font-weight:800;border-radius:999px;padding:6px 14px;display:inline-flex;gap:6px;align-items:center}
+.mday span{font-weight:400;font-size:12px}
+.mday small{font-size:11px;color:var(--brown)}
+.mday[aria-pressed="true"]{background:var(--pri);border-color:var(--pri);color:var(--on-pri)}
+.mday[aria-pressed="true"] small,.mday[aria-pressed="true"] span{color:var(--on-pri)}
+.plist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.plist li.plan{display:flex;align-items:flex-start;gap:10px;background:var(--soft);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+.plist li.plan.now{background:var(--ok-soft);border-color:color-mix(in srgb,var(--ok) 40%,var(--line))}
+.ptime{flex:none;font-family:var(--f-mono);font-size:14.5px;color:var(--on-pri);background:var(--pri);border-radius:8px;padding:3px 8px;margin-top:1px}
+.mtxt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;word-break:keep-all}
+.mtxt b{font-size:15px}
+.mtxt span{font-size:13px;color:var(--sub)}
+.mempty{font-size:13.5px;color:var(--sub);text-align:center;border:1px dashed var(--line);border-radius:12px;padding:12px;list-style:none}
+.padd{display:grid;grid-template-columns:auto 1fr;gap:8px;width:100%}
+.padd [name=memo],.padd>.btn,.padd .qbtns{grid-column:1/-1}
+.ptime-in{position:relative;display:block;width:128px}
+.ptime-in small{position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:11.5px;font-weight:800;color:var(--brown);pointer-events:none}
+.ptime-in .in{padding-left:44px;font-family:var(--f-mono);font-size:18px}
+@media (min-width:1000px){.padd{grid-template-columns:auto 1fr 1.2fr auto}.padd [name=memo],.padd>.btn{grid-column:auto}}
+.wxchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
 .qrgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-top:14px}
 .qrcard{border:1.5px dashed var(--line);border-radius:16px;padding:12px;text-align:center;background:#fff;color:#232C22;break-inside:avoid}
 .qrcard .qn{font-family:var(--f-display);font-size:24px;color:#3D6B35}
@@ -286,7 +329,7 @@ a.chip{text-decoration:none;display:inline-block}
 .zitems li{display:flex;align-items:center;gap:6px;padding:7px 8px;border-radius:12px;border:1px solid transparent}
 .zitems li:hover{background:var(--soft);border-color:var(--line)}
 .zitems li label{display:flex;align-items:center;gap:10px;flex:1;min-width:0;cursor:pointer}
-.zitems .txt{font-weight:700;overflow-wrap:anywhere}
+.zitems .txt{font-weight:700;word-break:keep-all;overflow-wrap:break-word}
 .zitems li.on .txt{color:var(--sub);text-decoration:line-through;font-weight:400}
 .zitems .dot{width:22px;text-align:center;color:var(--sub);flex:none}
 .zitems input[type=checkbox]{appearance:none;width:22px;height:22px;flex:none;border:2px solid var(--sub);border-radius:6px;display:grid;place-content:center;cursor:pointer;background:var(--card);margin:0}
@@ -399,9 +442,12 @@ a.chip{text-decoration:none;display:inline-block}
 <script src="config.js"></script>
 <script src="store.js"></script>
 <script src="xlsx-export.js"></script>
+<script src="wx.js"></script>
 <script>
 const S = window.Store;
 const $ = s => document.querySelector(s);
+// 괄호 부분은 한 덩어리로 다음 줄에 넘어가게
+const wrapParen = t => esc(t).replace(/\s*(\([^)]*\))/g, ' <span class="paren">$1</span>');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clone = o => JSON.parse(JSON.stringify(o));
 
@@ -669,6 +715,8 @@ async function openEvent(id, keepTab) {
   roll = await S.getRoll(id);
   marks = roll ? await S.listMarks(id) : [];
   if (!keepTab) startWatch(); else startMarksWatch();
+  pub = await S.getPub(id);
+  if (!keepTab) { const td = todayDayIndex(); planDay = td || 1; pedit = null; wxPick = null; wxData = null; wxFor = ''; }
   sheets = await S.listSheets(id);
   sheets.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
   hmap = {};
@@ -682,7 +730,7 @@ async function openEvent(id, keepTab) {
   surveys.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
   rcount = {};
   await Promise.all(surveys.map(async s => { rcount[s.id] = (await S.listResponses(id, s.id)).length; }));
-  if (cur && cur.id === id) renderEvent();
+  if (cur && cur.id === id) { renderEvent(); loadWx(); }
 }
 
 // 날짜에 따라 처음 보이는 탭: 출발 전 사전, 체험학습 중 당일, 다녀온 뒤 사후 (휴대폰·컴퓨터 같음)
@@ -732,9 +780,9 @@ function preTab() {
     const due = addDays(start, t.d);
     return `<div class="task ${t.done ? 'done' : ''}">
       <input type="checkbox" ${t.done ? 'checked' : ''} data-act="toggle" data-id="${t.id}" aria-label="완료">
-      <div class="tx"><div class="tt">${esc(t.t)}</div>
+      <div class="tx"><div class="tt">${wrapParen(t.t)}</div>
         <div class="tm">${fmt(due)} · ${dLabel(t.d)} ${taskStatus(t, due)}</div></div>
-      <button class="ib" data-act="edit-task" data-id="${t.id}">고치기</button></div>`;
+      <button class="pen" data-act="edit-task" data-id="${t.id}" aria-label="${esc(t.t)} 고치기" title="고치기">${PENCIL}</button></div>`;
   }).join('');
   return `<div class="cols"><div>
   <div class="sec">
@@ -745,7 +793,9 @@ function preTab() {
     </div>
     <div style="margin-top:10px"><button class="btn sm" data-act="add-task">+ 업무 더하기</button></div>
   </div>
+  ${planSection()}
   </div><div>
+  ${weatherCard()}
   ${safetySection()}
   ${surveySection('pre')}
   ${sheetSection('pre')}
@@ -801,8 +851,8 @@ function zoneCard(k, z) {
         <button class="btn sm warn" data-act="item-del-yes" data-id="${it.id}">빼기</button><button class="btn sm" data-act="item-del-no">취소</button></span></li>`;
     const must = it.imp ? '<span class="must">꼭!</span>' : '';
     return `<li class="${isT && it.done ? 'on' : ''}${it.imp ? ' imp' : ''}">
-      ${isT ? `<label><input type="checkbox" ${it.done ? 'checked' : ''} data-act="tcheck" data-id="${it.id}"><span class="txt">${esc(it.t)}</span>${must}</label>`
-        : `<span class="dot">${z.leave ? '✕' : '•'}</span><span class="txt" style="flex:1">${esc(it.t)}${must ? ' ' + must : ''}</span>`}
+      ${isT ? `<label><input type="checkbox" ${it.done ? 'checked' : ''} data-act="tcheck" data-id="${it.id}"><span class="txt">${wrapParen(it.t)}</span>${must}</label>`
+        : `<span class="dot">${z.leave ? '✕' : '•'}</span><span class="txt" style="flex:1">${wrapParen(it.t)}${must ? ' ' + must : ''}</span>`}
       <button class="pen" data-act="item-edit" data-id="${it.id}" aria-label="${esc(it.t)} 고치기" title="고치기">${PENCIL}</button>
       <button class="pen trash" data-act="item-del" data-id="${it.id}" aria-label="${esc(it.t)} 빼기" title="빼기">${TRASH}</button></li>`;
   }).join('');
@@ -1354,9 +1404,9 @@ function stopWatch() { if (unwatch) { unwatch(); unwatch = null; } if (unwatchEv
 
 function dayTab() {
   const soon = sheetSection('day');
-  if (!roll) return `<div class="sec"><h3>인원 점검</h3><div class="card svc">
+  if (!roll) return `<div class="cols"><div>${planSection()}<div class="sec"><h3>인원 점검</h3><div class="card svc">
       <div><div class="meta">버스 탑승, 점심 후, 숙소 점호처럼 정해진 시간마다 인원을 확인해요. 학생은 QR로 들어와 ${multiClass() ? '반과 ' : ''}번호를 누르고, 남은 번호는 선생님이 직접 확인해요.${cur.endDate ? ' 날짜마다 기본 점검 시간이 들어가요.' : ''}</div></div>
-      <div class="acts"><button class="btn sm pri" data-act="roll-start">기본 점검 시간으로 시작하기</button></div></div></div>${soon}`;
+      <div class="acts"><button class="btn sm pri" data-act="roll-start">기본 점검 시간으로 시작하기</button></div></div></div></div><div>${weatherCard()}${soon}</div></div>`;
   const days = {}, total = visTotal();
   sortedSlots().forEach(sl => { (days[sl.date] = days[sl.date] || []).push(sl); });
   const all = tripDays();
@@ -1387,12 +1437,12 @@ function dayTab() {
       <h3 class="st" style="margin:8px 0 2px;color:var(--ink)">${esc(nextSl.time)} ${esc(nextSl.label)}</h3>
       <div class="meta">${fmt(parseD(nextSl.date))} · 시작 ${roll.before}분 전부터 학생이 체크할 수 있어요</div></div>`;
   } else side = `<div class="card"><span class="badge gray">점검</span><h3 class="st" style="margin:8px 0 2px;color:var(--ink)">모든 점검이 끝났어요</h3></div>`;
-  return `<div class="cols"><div><div class="sec">
+  return `<div class="cols"><div>${planSection()}<div class="sec">
     <div class="rowb"><h3 style="margin:0;font-size:16px">인원 점검</h3>
       <div class="acts" style="display:flex;gap:6px"><button class="btn sm pri" data-act="roll-qr">QR·인쇄</button><button class="btn sm" data-act="roll-edit">점검 시간 고치기</button></div></div>
     <div class="meta" style="margin-bottom:8px">${clsFilter === 'all' ? '전체' : esc(clsName(clsFilter))} ${total}명 · 점검 시간 ${roll.before}분 전부터 ${roll.after}분 뒤까지 학생이 체크할 수 있어요. 번호표는 실시간으로 채워져요.</div>
     <div class="card" style="padding:4px 4px 6px">${blocks || '<div class="empty">점검 시간이 없어요</div>'}</div>
-  </div></div><div><div class="sec"><h3>지금</h3>${side}</div>${soon}</div></div>`;
+  </div></div><div><div class="sec"><h3>지금</h3>${side}</div>${weatherCard()}${soon}</div></div>`;
 }
 async function startRoll() {
   roll = buildRoll(defaultSlots(), 10, 30);
@@ -1481,6 +1531,8 @@ async function syncChildren() {
   for (const s of await S.listSafety(cur.id)) await S.saveSafety(cur.id, { ...s, classes, eventTitle: cur.title });
   const r = await S.getRoll(cur.id);
   if (r) { roll = { ...r, classes, eventTitle: cur.title }; await S.saveRoll(cur.id, roll); }
+  const pb = await S.getPub(cur.id);
+  if (pb) { pub = { ...pb, eventTitle: cur.title, date: cur.date, endDate: cur.endDate || '' }; await S.savePub(cur.id, pub); }
   await touch();
 }
 
@@ -1691,6 +1743,86 @@ async function sheetBoard(hid) {
     <div class="mact noprint"><button class="btn" data-act="sh-board" data-id="${hid}">새로고침</button><div class="sp"></div><button class="btn pri" data-act="print">인쇄 · PDF로 저장</button></div>`, true);
 }
 
+// ---------- 일정표 · 날씨 ----------
+let pub = null, planDay = 1, wxData = null, wxErr = '', wxFor = '', pedit = null, wxPick = null;
+const plansOf = () => (pub && pub.plans) || [];
+function normTime(v) {
+  v = String(v || '').trim(); if (!v) return '';
+  if (/^\d{3,4}$/.test(v)) v = v.padStart(4, '0').slice(0, 2) + ':' + v.padStart(4, '0').slice(2);
+  const m = v.match(/^(\d{1,2})[:시.\s]?(\d{0,2})/); if (!m) return v;
+  return String(Math.min(23, +m[1])).padStart(2, '0') + ':' + String(Math.min(59, +(m[2] || 0))).padStart(2, '0');
+}
+async function savePub(fields) {
+  pub = { owner: user.uid, plans: [], ...(pub || {}), ...fields, eventTitle: cur.title, date: cur.date, endDate: cur.endDate || '', updatedAt: Date.now() };
+  await S.savePub(cur.id, pub); await touch();
+}
+function todayDayIndex() { const d = tripDays().indexOf(ymd(today())); return d >= 0 ? d + 1 : 0; }
+function planSection() {
+  const days = tripDays(); if (planDay > days.length) planDay = 1;
+  const list = plansOf().filter(p => p.day === planDay).sort((a, b) => (a.time || '99') < (b.time || '99') ? -1 : 1);
+  const nowDay = todayDayIndex(), nowT = `${pad2(new Date().getHours())}:${pad2(new Date().getMinutes())}`;
+  const curIdx = nowDay === planDay ? list.reduce((k, p, i) => (p.time && p.time <= nowT ? i : k), -1) : -1;
+  const rows = list.map((p, i) => pedit === p.id
+    ? `<li class="plan qrow"><form class="padd" data-pf="plan-edit" data-id="${p.id}">
+        <label class="ptime-in"><small>시간</small><input class="in" name="time" value="${esc(p.time || '')}" inputmode="numeric" maxlength="5" data-ptime></label>
+        <input class="in" name="title" value="${esc(p.title)}" data-focus><input class="in" name="memo" value="${esc(p.memo || '')}" placeholder="메모">
+        <div class="qbtns"><button class="btn sm pri" type="submit">저장</button><button class="btn sm" type="button" data-act="plan-cancel">취소</button></div></form></li>`
+    : `<li class="plan ${i === curIdx ? 'now' : ''}"><span class="ptime">${esc(p.time || '언제든')}</span>
+        <div class="mtxt"><b>${esc(p.title)}${i === curIdx ? ' <span class="badge ok">지금</span>' : ''}</b>${p.memo ? `<span>${esc(p.memo)}</span>` : ''}</div>
+        <button class="pen" data-act="plan-edit" data-id="${p.id}" aria-label="고치기">${PENCIL}</button>
+        <button class="pen trash" data-act="plan-del" data-id="${p.id}" aria-label="빼기">${TRASH}</button></li>`).join('');
+  return `<div class="sec">
+    <div class="rowb"><h3 style="margin:0;font-size:16px">일정표</h3><button class="btn sm pri" data-act="plan-qr">학생용 일정 QR</button></div>
+    <div class="card plans">
+      <div class="mdays">${days.map((d, i) => `<button class="mday" data-act="plan-day" data-id="${i + 1}" aria-pressed="${i + 1 === planDay}">${i + 1}일차 <span>${fmt(parseD(d))}</span><small>${plansOf().filter(p => p.day === i + 1).length || ''}</small></button>`).join('')}</div>
+      <ul class="plist">${rows || '<li class="mempty">아직 이 날 일정이 없어요. 아래 칸에 시간과 할 일을 적어 주세요.</li>'}</ul>
+      <form class="padd" data-pf="plan-add">
+        <label class="ptime-in"><small>시간</small><input class="in" name="time" inputmode="numeric" maxlength="5" placeholder="09:30" data-ptime aria-label="시간"></label>
+        <input class="in" name="title" placeholder="할 일·장소 (예: 불국사 관람)" aria-label="할 일" autocomplete="off">
+        <input class="in" name="memo" placeholder="메모 (예: 매표소 앞 모이기)" aria-label="메모" autocomplete="off">
+        <button type="submit" class="btn pri">넣기</button>
+      </form>
+    </div></div>`;
+}
+function weatherCard() {
+  const place = pub && pub.place;
+  let body;
+  if (!place || wxPick !== null) {
+    const results = Array.isArray(wxPick) ? wxPick : [];
+    body = `<div class="meta">체험학습 지역을 고르면 날짜별 날씨 예보가 나와요.</div>
+      <div class="wxchips">${WX.PLACES.map(p => `<button class="chip" data-act="wx-set" data-n="${esc(p.name)}" data-lat="${p.lat}" data-lon="${p.lon}">${esc(p.name)}</button>`).join('')}</div>
+      <form class="add" data-pf="wx-search" style="margin-top:10px"><input name="q" placeholder="다른 곳 찾기 (예: 단양, 보령, 태안)" autocomplete="off"><button type="submit">찾기</button></form>
+      ${results.length ? `<div class="wxchips" style="margin-top:8px">${results.map(p => `<button class="chip" data-act="wx-set" data-n="${esc(p.name)}" data-lat="${p.lat}" data-lon="${p.lon}">${esc(p.name)} <span class="meta">${esc(p.sub)}</span></button>`).join('')}</div>` : ''}
+      ${wxErr ? `<div class="hint" style="color:var(--warn)">${esc(wxErr)}</div>` : ''}
+      ${place ? '<button class="ib" data-act="wx-cancel">취소</button>' : ''}`;
+  } else {
+    const end = parseD(cur.endDate || cur.date);
+    body = end < today() ? `<div class="meta">${esc(place.name)} · 지난 체험학습이에요.</div>`
+      : wxData ? WX.table(tripDays(), wxData) : `<div class="meta">${wxErr ? esc(wxErr) : '날씨 예보를 불러오는 중이에요…'}</div>`;
+  }
+  return `<div class="sec" id="wxsec"><div class="rowb"><h3 style="margin:0;font-size:16px">날씨${place ? ` <span class="meta" style="font-family:var(--f-body);font-size:13px">${esc(place.name)}</span>` : ''}</h3>
+    ${place && wxPick === null ? '<button class="btn sm" data-act="wx-change">지역 바꾸기</button>' : ''}</div>
+    <div class="card">${body}</div></div>`;
+}
+async function loadWx() {
+  const place = pub && pub.place; if (!place) return;
+  const key = `${place.lat},${place.lon}`;
+  if (wxFor === key && wxData) return;
+  wxFor = key; wxErr = '';
+  try { wxData = await WX.forecast(place); } catch (e) { wxData = null; wxErr = '날씨 예보를 불러오지 못했어요. 잠시 뒤 다시 열어 주세요.'; }
+  const el = document.getElementById('wxsec'); if (el) el.outerHTML = weatherCard();
+}
+function rerenderPlan() { renderEvent(); const f = document.querySelector('#tabc [data-focus]'); if (f) f.focus(); }
+function planQR() {
+  const u = new URL('schedule.html', location.href);
+  u.hash = ''; u.search = `?e=${encodeURIComponent(cur.id)}`;
+  const days = tripDays();
+  const list = days.map((d, i) => { const ps = plansOf().filter(p => p.day === i + 1).sort((a, b) => (a.time || '99') < (b.time || '99') ? -1 : 1);
+    return ps.length ? `<div class="pl-g"><b>${i + 1}일차 ${fmt(parseD(d))}</b><ul>${ps.map(p => `<li>${esc(p.time || '')} ${esc(p.title)}</li>`).join('')}</ul></div>` : ''; }).join('');
+  qrModal({ url: u.toString(), title: `${cur.title} 일정표`, sub: '휴대폰 카메라로 찍으면 일정과 날씨를 볼 수 있어요', extra: list ? `<div class="pl">${list}</div>` : '' });
+}
+
+if (/KAKAOTALK/i.test(navigator.userAgent)) setTimeout(() => toast('카카오톡 안에서는 로그인이 안 돼요. 기본 브라우저로 열고 있어요. 안 열리면 오른쪽 위 [⋮] → [다른 브라우저로 열기]를 눌러 주세요.'), 900);
 // ---------- 이벤트 연결 ----------
 document.addEventListener('click', async ev => {
   const el = ev.target.closest('[data-act]');
@@ -1760,6 +1892,14 @@ document.addEventListener('click', async ev => {
       case 'pack-start-s': await startStudentList(); break;
       case 'sf-new': safetyForm(); break;
       case 'sh-new': sheetForm(null, id); break;
+      case 'plan-day': planDay = Number(id); pedit = null; rerenderPlan(); break;
+      case 'plan-edit': pedit = id; rerenderPlan(); break;
+      case 'plan-cancel': pedit = null; rerenderPlan(); break;
+      case 'plan-del': { const p = plansOf().find(x => x.id === id); if (!confirm(`'${p.title}'을(를) 일정에서 뺄까요?`)) return; await savePub({ plans: plansOf().filter(x => x.id !== id) }); renderEvent(); break; }
+      case 'plan-qr': planQR(); break;
+      case 'wx-change': wxPick = []; wxErr = ''; renderEvent(); break;
+      case 'wx-cancel': wxPick = null; renderEvent(); loadWx(); break;
+      case 'wx-set': wxPick = null; wxData = null; wxFor = ''; await savePub({ place: { name: el.dataset.n, lat: Number(el.dataset.lat), lon: Number(el.dataset.lon) } }); renderEvent(); loadWx(); toast(`${el.dataset.n} 날씨를 보여 줄게요`); break;
       case 'sh-edit': sheetForm(sheets.find(x => x.id === id)); break;
       case 'sh-save': await saveSheetForm(); break;
       case 'sh-qr': sheetQR(id); break;
@@ -1853,11 +1993,27 @@ document.addEventListener('submit', async ev => {
   const f = ev.target.closest('form[data-pf]');
   if (!f) return;
   ev.preventDefault();
-  try { await packSubmit(f); } catch (e) { console.error(e); toast('문제가 생겼어요. 잠시 뒤 다시 해 주세요'); }
+  try {
+    if (f.dataset.pf === 'plan-add' || f.dataset.pf === 'plan-edit') {
+      const title = f.title.value.trim(); if (!title) { f.title.focus(); return; }
+      const item = { time: normTime(f.time.value), title, memo: f.memo.value.trim() };
+      if (f.dataset.pf === 'plan-add') await savePub({ plans: [...plansOf(), { id: S.newId(), day: planDay, ...item }] });
+      else { await savePub({ plans: plansOf().map(p => p.id === f.dataset.id ? { ...p, ...item } : p) }); pedit = null; }
+      renderEvent();
+      if (f.dataset.pf === 'plan-add') { const t = document.querySelector('form[data-pf="plan-add"] [name=time]'); if (t) t.focus(); }
+      return;
+    }
+    if (f.dataset.pf === 'wx-search') {
+      const q = f.q.value.trim(); if (!q) return;
+      wxErr = ''; try { wxPick = await WX.search(q); if (!wxPick.length) wxErr = `"${q}"을(를) 찾지 못했어요. 시·군 이름으로 찾아 주세요.`; } catch (e) { wxPick = []; wxErr = '찾지 못했어요. 인터넷 연결을 확인해 주세요.'; }
+      renderEvent(); return;
+    }
+    await packSubmit(f); } catch (e) { console.error(e); toast('문제가 생겼어요. 잠시 뒤 다시 해 주세요'); }
 });
 document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && (pq || pdel || zdel)) { pq = null; pdel = null; zdel = null; rerenderPack(); } });
 document.addEventListener('input', ev => {
   const t = ev.target;
+  if (t.dataset && t.dataset.ptime !== undefined) { const d = t.value.replace(/\D/g, '').slice(0, 4); t.value = d.length === 4 ? d.slice(0, 2) + ':' + d.slice(2) : d; return; }
   if (hdraft) {
     if (t.dataset.hd) hdraft[t.dataset.hd] = t.value;
     if (t.dataset.hi !== undefined) { const q = hdraft.questions[Number(t.dataset.hi)]; if (t.dataset.hf === 'text') q.text = t.value; if (t.dataset.hf === 'options') q.options = t.value.split('\n'); }

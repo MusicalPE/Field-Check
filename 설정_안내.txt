@@ -7,6 +7,7 @@ packing.html - 학생 준비물 화면 (QR로 들어와 체크, 로그인 없음
 safety.html - 학생 안전 교육 화면 (영상 시청 후 번호 체크, 로그인 없음)
 rollcall.html - 학생 인원 점검 화면 (점검 시간에 내 번호 체크, 로그인 없음)
 sheet.html - 모둠 활동지 화면 (모둠 QR로 들어와 함께 적기, 로그인 없음)
+schedule.html - 학생용 일정표·날씨 화면 (로그인 없음)
 report.html - 설문 결과 정리·인쇄 쪽 (선생님용)
 store.js    - 저장 담당 (파이어베이스 / 체험 모드)
 config.js   - 파이어베이스 설정을 붙여 넣는 곳

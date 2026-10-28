@@ -68,6 +68,8 @@
         for (const m of ms.docs) await m.ref.delete();
         await r.ref.delete();
       }
+      const pb = await evRef(id).collection('pub').get();
+      for (const x of pb.docs) await x.ref.delete();
       const sh = await evRef(id).collection('sheets').get();
       for (const h of sh.docs) {
         const as = await h.ref.collection('answers').get();
@@ -116,6 +118,10 @@
     };
     S.removeView = async (eid, sid, c, n) => vwCol(eid, sid).doc(c + '_' + n).delete();
     S.removeViewLegacy = async (eid, sid, docId) => vwCol(eid, sid).doc(docId).delete();
+    // 학생도 보는 일정표·날씨 지역
+    const pubDoc = eid => evRef(eid).collection('pub').doc('info');
+    S.getPub = async eid => { const d = await pubDoc(eid).get(); return d.exists ? d.data() : null; };
+    S.savePub = async (eid, data) => pubDoc(eid).set(data);
     // 모둠 활동지
     const shCol = eid => evRef(eid).collection('sheets');
     const anCol = (eid, hid) => shCol(eid).doc(hid).collection('answers');
@@ -179,7 +185,7 @@
       d.lists = d.lists || {}; d.checks = d.checks || {};
       d.safety = d.safety || {}; d.views = d.views || {};
       d.roll = d.roll || {}; d.marks = d.marks || {};
-      d.sheets = d.sheets || {}; d.sanswers = d.sanswers || {};
+      d.sheets = d.sheets || {}; d.sanswers = d.sanswers || {}; d.pub = d.pub || {};
       return d;
     };
     const save = d => localStorage.setItem(KEY, JSON.stringify(d));
@@ -220,7 +226,7 @@
       if (e.memberNames) delete e.memberNames[uid]; save(d);
     };
     S.deleteEvent = async id => {
-      const d = load(); delete d.events[id]; delete d.surveys[id]; delete d.lists[id]; delete d.safety[id]; delete d.roll[id]; delete d.marks[id]; delete d.sheets[id];
+      const d = load(); delete d.events[id]; delete d.surveys[id]; delete d.lists[id]; delete d.safety[id]; delete d.roll[id]; delete d.marks[id]; delete d.sheets[id]; delete d.pub[id];
       Object.keys(d.sanswers).forEach(k => { if (k.startsWith(id + '|')) delete d.sanswers[k]; });
       Object.keys(d.views).forEach(k => { if (k.startsWith(id + '|')) delete d.views[k]; });
       Object.keys(d.responses).forEach(k => { if (k.startsWith(id + '|')) delete d.responses[k]; });
@@ -284,6 +290,8 @@
       d.responses[k][uid] = { answers, at: Date.now() };
       save(d);
     };
+    S.getPub = async eid => { const x = load().pub[eid]; return x ? clone(x) : null; };
+    S.savePub = async (eid, data) => { const d = load(); d.pub[eid] = data; save(d); };
     S.listSheets = async eid => Object.entries(load().sheets[eid] || {}).map(([id, h]) => ({ id, ...clone(h) }));
     S.getSheet = async (eid, hid) => { const h = (load().sheets[eid] || {})[hid]; return h ? { id: hid, ...clone(h) } : null; };
     S.saveSheet = async (eid, h) => { const d = load(); const { id, ...rest } = h; d.sheets[eid] = d.sheets[eid] || {}; d.sheets[eid][id] = rest; save(d); };
