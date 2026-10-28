@@ -639,9 +639,8 @@ async function openEvent(id, keepTab) {
   if (cur && cur.id === id) renderEvent();
 }
 
-// 휴대폰에서는 날짜에 따라 처음 보이는 탭: 출발 전 사전, 체험학습 중 당일, 다녀온 뒤 사후
+// 날짜에 따라 처음 보이는 탭: 출발 전 사전, 체험학습 중 당일, 다녀온 뒤 사후 (휴대폰·컴퓨터 같음)
 function autoTab(e) {
-  if (!window.matchMedia || !matchMedia('(max-width:640px)').matches) return 'pre';
   const t = today(), a = parseD(e.date), b = parseD(e.endDate || e.date);
   return t < a ? 'pre' : t > b ? 'post' : 'day';
 }
