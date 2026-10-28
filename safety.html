@@ -122,7 +122,7 @@ function render() {
     <div class="top"><div class="ev">${esc(sf.eventTitle || '')}</div><h1>${esc(sf.title)}</h1>
       <p>영상을 끝까지 보고, 아래에서 시청 체크를 해 주세요.</p></div>
     <div class="card"><span class="step">1단계</span><h2>영상을 끝까지 봐요</h2>${videos}
-      ${sf.memo ? `<p class="memo">${esc(sf.memo)}</p>` : ''}</div>
+      ${sf.planText ? `<p class="memo">${esc(sf.planText)}</p>` : ''}${sf.memo ? `<p class="memo">${esc(sf.memo)}</p>` : ''}</div>
     ${checkPart}`;
 }
 
