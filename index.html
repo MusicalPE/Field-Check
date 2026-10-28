@@ -278,6 +278,7 @@ label.f{display:block;font-size:13px;font-weight:800;color:var(--sub);margin:12p
 .pdrop li[aria-selected="true"],.pdrop li:hover{background:var(--pri-soft)}
 .pdrop .pn{font-weight:800;font-size:14.5px}.pdrop .pn small{font-weight:400;color:var(--sub);font-size:12px}
 .pdrop .pa{font-size:12.5px;color:var(--sub)}
+.pdrop .phead{font-size:11.5px;font-weight:800;color:var(--sub);padding:6px 12px 2px;cursor:default;background:none!important}
 .pdrop .pnote{font-size:12.5px;color:var(--sub);cursor:default;background:none!important}
 .pok{color:var(--ok);font-weight:800}
 .wxempty{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
@@ -1846,7 +1847,7 @@ function planSection() {
     </div></div>`;
 }
 // ---------- 장소 찾기 (카카오 장소 검색, 안 되면 지역 이름 검색) ----------
-let pdraft = null, kakaoPlaces = null, kakaoWhy = '', pTimer = null, pItems = [], pSel = -1, pSeq = 0, pNote = '';
+let kakaoGeo = null, pdraft = null, kakaoPlaces = null, kakaoWhy = '', pTimer = null, pItems = [], pSel = -1, pSeq = 0, pNote = '';
 const mapUrl = (pi, name) => (pi && pi.url) || 'https://map.kakao.com/link/search/' + encodeURIComponent(name || '');
 function loadKakao() {
   if (kakaoPlaces !== null) return Promise.resolve(kakaoPlaces);
@@ -1857,19 +1858,34 @@ function loadKakao() {
     sc.src = 'https://dapi.kakao.com/v2/maps/sdk.js?appkey=' + encodeURIComponent(key) + '&libraries=services&autoload=false';
     const fail = why => { kakaoPlaces = false; kakaoWhy = why; res(false); };
     const tm = setTimeout(() => fail('카카오 검색이 응답하지 않아 지역 이름으로 찾았어요.'), 6000);
-    sc.onload = () => { try { kakao.maps.load(() => { clearTimeout(tm); kakaoPlaces = new kakao.maps.services.Places(); res(kakaoPlaces); }); } catch (e) { clearTimeout(tm); fail('카카오 검색을 켜지 못해 지역 이름으로 찾았어요.'); } };
+    sc.onload = () => { try { kakao.maps.load(() => { clearTimeout(tm); kakaoPlaces = new kakao.maps.services.Places(); kakaoGeo = new kakao.maps.services.Geocoder(); res(kakaoPlaces); }); } catch (e) { clearTimeout(tm); fail('카카오 검색을 켜지 못해 지역 이름으로 찾았어요.'); } };
     sc.onerror = () => { clearTimeout(tm); sc.remove(); fail('카카오 검색을 불러오지 못해 지역 이름으로 찾았어요.'); };
     document.head.appendChild(sc);
   });
 }
+// 도시·지역 이름: 카카오 주소 검색(지역만) + 자주 가는 곳 목록
+async function findRegions(q) {
+  const out = [], seen = new Set(), add = r => { const k = r.addr; if (!seen.has(k)) { seen.add(k); out.push(r); } };
+  if (kakaoGeo) {
+    const tries = /[시군구도읍면동]$/.test(q) ? [q] : [q, q + '시', q + '군'];
+    const lists = await Promise.all(tries.map(t => new Promise(res => kakaoGeo.addressSearch(t, (data, st) => res(st === kakao.maps.services.Status.OK ? data : []), { analyze_type: kakao.maps.services.AnalyzeType.EXACT }))));
+    lists.flat().filter(d => d.address_type === 'REGION' && d.address).forEach(d => {
+      const a = d.address, name = a.region_3depth_name || a.region_2depth_name || a.region_1depth_name;
+      add({ name, addr: d.address_name, url: '', lat: +d.y, lon: +d.x, cat: '지역', region: true });
+    });
+  }
+  if (!out.length) WX.PLACES.filter(p => p.name.startsWith(q) || q.startsWith(p.name)).forEach(p => add({ name: p.name, addr: p.name + ' 일대', url: '', lat: p.lat, lon: p.lon, cat: '지역', region: true }));
+  return out.slice(0, 3);
+}
 async function findPlaces(q) {
   const ps = await loadKakao();
   if (ps) {
-    const got = await new Promise(res => ps.keywordSearch(q, (data, st) => res(st === kakao.maps.services.Status.OK ? data : st === kakao.maps.services.Status.ZERO_RESULT ? [] : null), { size: 8 }));
-    if (got) return got.map(d => ({ name: d.place_name, addr: d.road_address_name || d.address_name, url: d.place_url, lat: +d.y, lon: +d.x, cat: (d.category_name || '').split(' > ').pop() }));
+    const [regions, got] = await Promise.all([findRegions(q).catch(() => []),
+      new Promise(res => ps.keywordSearch(q, (data, st) => res(st === kakao.maps.services.Status.OK ? data : st === kakao.maps.services.Status.ZERO_RESULT ? [] : null), { size: 8 }))]);
+    if (got) return [...regions, ...got.map(d => ({ name: d.place_name, addr: d.road_address_name || d.address_name, url: d.place_url, lat: +d.y, lon: +d.x, cat: (d.category_name || '').split(' > ').pop() }))];
   }
-  const r = await WX.search(q);
-  return r.map(x => ({ name: x.name, addr: x.sub, url: '', lat: x.lat, lon: x.lon }));
+  const regions = await findRegions(q), r = await WX.search(q).catch(() => []);
+  return [...regions, ...r.filter(x => !regions.some(g => x.name.startsWith(g.name))).map(x => ({ name: x.name, addr: x.sub, url: '', lat: x.lat, lon: x.lon, cat: '지역', region: true }))];
 }
 async function autoPlace(q) {
   try { return (await Promise.race([findPlaces(q), new Promise(r => setTimeout(() => r([]), 5000))]))[0] || null; } catch (e) { return null; }
@@ -1883,7 +1899,7 @@ function renderPlaceLinks() {
 }
 function showPlaces() {
   const ul = $('#f-plist'), inp = $('#f-place'); if (!ul) return;
-  ul.innerHTML = pItems.map((p, i) => `<li role="option" data-pi="${i}" aria-selected="${i === pSel}"><span class="pn">${esc(p.name)}${p.cat ? ` <small>${esc(p.cat)}</small>` : ''}</span>${p.addr ? `<span class="pa">${esc(p.addr)}</span>` : ''}</li>`).join('')
+  ul.innerHTML = pItems.map((p, i) => `${i === 0 || !!pItems[i - 1].region !== !!p.region ? `<li class="phead" role="presentation">${p.region ? '도시·지역 (날씨 예보를 지역으로)' : '장소'}</li>` : ''}<li role="option" data-pi="${i}" aria-selected="${i === pSel}"><span class="pn">${esc(p.name)}${p.cat ? ` <small>${esc(p.cat)}</small>` : ''}</span>${p.addr ? `<span class="pa">${esc(p.addr)}</span>` : ''}</li>`).join('')
     + (pNote ? `<li class="pnote" role="presentation">${esc(pNote)}</li>` : '');
   ul.hidden = !ul.innerHTML; inp.setAttribute('aria-expanded', String(!ul.hidden));
 }
