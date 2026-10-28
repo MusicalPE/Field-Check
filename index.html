@@ -133,7 +133,10 @@ h2{font-family:var(--f-display);font-weight:400;font-size:28px;margin:0;color:va
 .meter .mnum{font-family:var(--f-mono);font-size:32px;font-weight:500;color:var(--pri);line-height:1.1}
 .meter .cap{font-size:12px;font-weight:800;color:var(--sub);margin-top:2px}
 .evhead .full{grid-column:1/-1}
-.evhead{grid-template-columns:minmax(0,1fr) auto auto}
+.evhead{grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto auto}
+.evhead .full{grid-column:1;grid-row:2}
+.evhead .full .mbar{border-top:0;padding-top:0}
+.evr{grid-column:2;grid-row:1/3;display:flex;gap:22px;align-items:center;align-self:stretch;border-left:1.5px solid var(--line);padding-left:24px}
 .evwx{min-width:0}
 .evwx.pc{max-width:min(440px,38vw);align-self:center}
 .evwx.m{display:none}
@@ -430,6 +433,9 @@ a.chip{text-decoration:none;display:inline-block}
   .evhead{grid-template-columns:1fr;padding:18px}
   .evwx.pc{display:none}
   .evwx.m{display:block;margin:-4px 0 16px;padding:14px 12px}
+  .evhead .full{grid-column:1;grid-row:auto}
+  .evr{grid-column:1;grid-row:auto;border-left:0;padding-left:0;display:block}
+  .evhead .full .mbar{border-top:1.5px dashed var(--line);padding-top:12px}
   .meter{display:flex;align-items:baseline;gap:8px;justify-content:center;padding:8px 14px}
   .meter .mnum{font-size:24px}
   .tab small{display:none}
@@ -799,9 +805,9 @@ function renderEvent() {
       <h2>${esc(e.title)}</h2>
       <div class="meta">${dateRange(e)}${e.place ? ' · ' + esc(e.place) : ''}${e.target ? ' · ' + esc(e.target) : ''} · ${classesOf(e).map(c => `${esc(c.name)} ${c.total}명`).join(', ')}</div>
       </div>
-      ${weatherCard('pc')}
+      <div class="evr">${weatherCard('pc')}
       <div class="mcol"><div class="meter">${meter(e)}</div>
-        <button class="btn sm setbtn" data-act="set-modal"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg>설정</button></div>
+        <button class="btn sm setbtn" data-act="set-modal"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg>설정</button></div></div>
       <div class="full">${membersCard()}${classFilterBar()}</div>
     </div>
     ${weatherCard('m')}
