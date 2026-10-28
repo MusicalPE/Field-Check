@@ -421,6 +421,16 @@ const DEFAULT_SURVEY = {
     { type: 'text', text: '선생님께 하고 싶은 말이 있다면 적어 주세요.' },
   ],
 };
+const DEFAULT_PRE_SURVEY = {
+  title: '체험학습 사전 설문',
+  questions: [
+    { type: 'star', text: '이번 체험학습이 얼마나 기대되나요?' },
+    { type: 'choice', text: '가장 기대되는 것은 무엇인가요?', options: ['친구들과 함께하는 시간', '새로운 곳 구경', '직접 해 보는 활동', '먹거리'] },
+    { type: 'choice', text: '체험학습 장소에 가 본 적이 있나요?', options: ['처음 가요', '한 번 가 봤어요', '여러 번 가 봤어요'] },
+    { type: 'text', text: '걱정되거나 선생님이 알아야 할 점이 있나요?' },
+    { type: 'text', text: '체험학습에서 꼭 알고 싶은 것을 적어 주세요.' },
+  ],
+};
 const QTYPES = { star: '별점 (5점)', choice: '고르기', text: '자유롭게 쓰기' };
 // 준비물 기본 목록: [분류, 두고 오는 물건인지, [항목...]]
 const PACK_STUDENT_DAY = [
@@ -718,6 +728,7 @@ function preTab() {
   </div>
   </div><div>
   ${safetySection()}
+  ${surveySection('pre')}
   <div class="sec"><h3>곧 들어올 기능</h3><div class="soon">
     <div class="card"><b>사전 조사</b><span>모둠 QR로 조사 내용 받기</span></div>
   </div></div></div></div>
@@ -854,8 +865,10 @@ function packQR() {
   });
 }
 
-function postTab() {
-  const list = surveys.map(s => `
+const phaseOf = s => s.phase || 'post';
+function surveySection(phase) {
+  const mine = surveys.filter(s => phaseOf(s) === phase);
+  const list = mine.map(s => `
     <div class="card svc">
       <div><span class="badge ${s.open ? 'ok' : 'gray'}">${s.open ? '받는 중' : '마감'}</span>
         <span class="badge">응답 ${rcount[s.id] ?? '…'}명</span>
@@ -868,12 +881,17 @@ function postTab() {
         <button class="btn sm" data-act="edit-survey" data-id="${s.id}">고치기</button>
         <button class="btn sm warn" data-act="del-survey" data-id="${s.id}">지우기</button>
       </div></div>`).join('');
+  const label = phase === 'pre' ? '사전 설문' : '사후 설문';
+  const empty = phase === 'pre'
+    ? `<b>아직 사전 설문이 없어요</b>출발 전에 기대, 걱정되는 점, 알고 싶은 것을 물어봐요. '새 설문'을 누르면 기본 질문이 준비돼요.`
+    : `<b>아직 사후 설문이 없어요</b>'새 설문'을 누르면 기본 질문 6개가 들어간 설문이 준비돼요.<br>학생은 QR만 찍으면 로그인 없이 바로 답할 수 있어요.`;
   return `<div class="sec">
-    <div class="rowb"><h3 style="margin:0;font-size:16px">사후 설문</h3><button class="btn pri sm" data-act="new-survey">+ 새 설문</button></div>
+    <div class="rowb"><h3 style="margin:0;font-size:16px">${label}</h3><button class="btn pri sm" data-act="new-survey" data-id="${phase}">+ 새 설문</button></div>
     ${list ? `<div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(min(380px,100%),1fr))">${list}</div>`
-      : `<div class="card empty"><b>아직 설문이 없어요</b>'새 설문'을 누르면 기본 질문 6개가 들어간 설문이 준비돼요.<br>학생은 QR만 찍으면 로그인 없이 바로 답할 수 있어요.</div>`}
+      : `<div class="card empty" style="padding:28px 20px">${empty}</div>`}
   </div>`;
 }
+function postTab() { return surveySection('post'); }
 
 // ---------- 업무 ----------
 async function saveCur(...keys) {
@@ -903,8 +921,8 @@ function taskOffset() {
 
 // ---------- 설문 만들기 ----------
 let draft = null;
-function surveyForm(s) {
-  draft = s ? clone(s) : { ...clone(DEFAULT_SURVEY), _new: true };
+function surveyForm(s, phase) {
+  draft = s ? clone(s) : { ...clone(phase === 'pre' ? DEFAULT_PRE_SURVEY : DEFAULT_SURVEY), phase: phase || 'post', _new: true };
   draft.questions.forEach(q => { q.id = q.id || S.newId(); if (q.type === 'choice' && !q.options) q.options = ['', '']; });
   renderSurveyForm();
 }
@@ -944,7 +962,7 @@ async function saveSurveyForm() {
   const isNew = draft._new;
   const s = {
     id: draft.id || S.newId(), title, questions: draft.questions.map(q => ({ id: q.id, type: q.type, text: q.text, ...(q.options ? { options: q.options } : {}) })),
-    open: isNew ? true : !!draft.open, owner: user.uid, eventTitle: cur.title,
+    open: isNew ? true : !!draft.open, owner: user.uid, eventTitle: cur.title, phase: draft.phase || 'post', ...(draft.reportMemo ? { reportMemo: draft.reportMemo } : {}),
     createdAt: draft.createdAt || Date.now(), updatedAt: Date.now(),
   };
   await S.saveSurvey(cur.id, s); await touch();
@@ -1574,7 +1592,7 @@ document.addEventListener('click', async ev => {
       case 'del-task':
         if (!confirm('이 업무를 지울까요?')) return;
         cur.tasks = cur.tasks.filter(x => x.id !== id); closeModal(); renderEvent(); await saveCur('tasks'); break;
-      case 'new-survey': surveyForm(); break;
+      case 'new-survey': surveyForm(null, id || 'post'); break;
       case 'edit-survey': surveyForm(surveys.find(x => x.id === id)); break;
       case 'q-add': draft.questions.push({ id: S.newId(), type: 'star', text: '' }); renderSurveyForm(); break;
       case 'q-del': draft.questions.splice(Number(el.dataset.i), 1); renderSurveyForm(); break;
