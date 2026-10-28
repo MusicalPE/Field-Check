@@ -369,6 +369,7 @@ a.chip{text-decoration:none;display:inline-block}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="config.js"></script>
 <script src="store.js"></script>
+<script src="xlsx-export.js"></script>
 <script>
 const S = window.Store;
 const $ = s => document.querySelector(s);
@@ -999,14 +1000,8 @@ async function showResults(sid) {
 async function downloadCsv(sid) {
   const s = surveys.find(x => x.id === sid);
   const rs = await S.listResponses(cur.id, sid);
-  const cell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  const rows = [['번호', ...s.questions.map(q => q.text)].map(cell).join(',')];
-  rs.forEach((r, i) => rows.push([i + 1, ...s.questions.map(q => (r.answers || {})[q.id])].map(cell).join(',')));
-  const blob = new Blob(['\ufeff' + rows.join('\r\n')], { type: 'text/csv;charset=utf-8' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `${cur.title}_${s.title}_결과.csv`.replace(/[\\/:*?"<>|]/g, '_');
-  a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  const kind = await window.exportSurveyXlsx(cur.title, s, rs);
+  toast(kind === 'xlsx' ? '엑셀 파일(통계·응답)을 저장했어요' : '엑셀 도구를 못 불러와서 CSV로 저장했어요');
 }
 
 // ---------- 반 구성 ----------
