@@ -45,11 +45,12 @@ input,textarea,select{font:inherit;color:var(--ink)}
 :focus-visible{outline:2px solid var(--acc);outline-offset:2px}
 
 /* 머리 */
-header{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid color-mix(in srgb,var(--line) 70%,transparent)}
-.hd{max-width:1240px;margin:0 auto;padding:10px max(16px,env(safe-area-inset-left,0px));display:flex;align-items:center;gap:12px}
+.hside{display:flex;flex-direction:column;align-items:flex-end;gap:10px}
+.hwho{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.hd{max-width:1240px;margin:0 auto;padding:16px max(16px,env(safe-area-inset-left,0px)) calc(28px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .logo{display:flex;align-items:center;gap:10px;cursor:pointer;min-width:0}
-.logo img{width:38px;height:38px;border-radius:11px;box-shadow:0 3px 8px var(--shadow)}
-.logo b{font-family:var(--f-display);font-weight:400;font-size:26px;line-height:1;color:var(--pri);white-space:nowrap}
+.logo img{width:30px;height:30px;border-radius:9px;box-shadow:0 3px 8px var(--shadow)}
+.logo b{font-family:var(--f-display);font-weight:400;font-size:20px;line-height:1;color:var(--pri);white-space:nowrap}
 .logo small{font-family:var(--f-mono);font-size:11px;letter-spacing:.12em;color:var(--brown);font-weight:500;text-transform:uppercase;white-space:nowrap}
 .mode{font-size:11px;background:var(--acc-soft);color:var(--acc-ink);border:1px solid color-mix(in srgb,var(--acc) 40%,transparent);border-radius:999px;padding:2px 9px;font-weight:800}
 .sp{flex:1}
@@ -57,7 +58,7 @@ header{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 8
 .hbtn{background:var(--card);border:1.5px solid var(--line);border-radius:999px;padding:6px 14px;font-size:13px;font-weight:700;color:var(--sub)}
 .hbtn:hover{border-color:var(--pri);color:var(--pri)}
 
-main{max-width:1240px;margin:0 auto;padding:22px max(16px,env(safe-area-inset-left,0px)) 90px}
+main{max-width:1240px;margin:0 auto;padding:calc(22px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-left,0px)) 40px;min-height:70vh}
 h2{font-family:var(--f-display);font-weight:400;font-size:28px;margin:0;color:var(--pri);line-height:1.2}
 .rowb{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;flex-wrap:wrap}
 
@@ -112,7 +113,7 @@ h2{font-family:var(--f-display);font-weight:400;font-size:28px;margin:0;color:va
 .mbar .chip,.cfbar .chip{padding:3px 12px}
 
 /* 탭 */
-.tabs{display:flex;gap:6px;margin:0 0 18px;background:var(--card);border:1.5px solid var(--line);padding:6px;border-radius:999px;box-shadow:0 4px 16px var(--shadow);position:sticky;top:62px;z-index:10}
+.tabs{display:flex;gap:6px;margin:0 0 18px;background:var(--card);border:1.5px solid var(--line);padding:6px;border-radius:999px;box-shadow:0 4px 16px var(--shadow);position:sticky;top:calc(10px + env(safe-area-inset-top,0px));z-index:10}
 .tab{flex:1;border:0;background:transparent;border-radius:999px;padding:9px 8px;font-weight:800;color:var(--sub);font-size:15px;display:flex;align-items:center;justify-content:center;gap:6px}
 .tab small{font-weight:700;font-size:12px;opacity:.75}
 .tab.on{background:var(--pri);color:var(--on-pri);box-shadow:0 4px 12px color-mix(in srgb,var(--pri) 30%,transparent)}
@@ -235,21 +236,22 @@ label.f{display:block;font-size:13px;font-weight:800;color:var(--sub);margin:12p
 @media (max-width:640px){
   .two{grid-template-columns:1fr}
   .rrow{grid-template-columns:96px 1fr 58px}
-  .who,.logo small{display:none}
+  .logo small{display:none}
   .hero{flex-wrap:wrap;gap:12px}
   .hero img{width:96px;border-radius:20px}
-  .hero .btn{width:100%}
+  .hside{width:100%;align-items:stretch}
+  .hwho{justify-content:space-between}
+  .hero .btn.pri{width:100%}
   .evhead{grid-template-columns:1fr;padding:18px}
   .meter{display:flex;align-items:baseline;gap:8px;justify-content:center;padding:8px 14px}
   .meter .mnum{font-size:24px}
-  .tabs{top:58px}
   .tab small{display:none}
   h2{font-size:24px}
   .card{border-radius:18px;padding:15px}
 }
 @media print{
   body{background:#fff}
-  body.printing header,body.printing main,body.printing .toast{display:none!important}
+  body.printing main,body.printing .toast{display:none!important}
   body.printing .ov{position:static;background:none;padding:0;display:block;backdrop-filter:none}
   body.printing .md{max-width:none;border:0;box-shadow:none}
   body.printing .noprint{display:none!important}
@@ -260,14 +262,8 @@ label.f{display:block;font-size:13px;font-weight:800;color:var(--sub);margin:12p
 </style>
 </head>
 <body>
-<header><div class="hd">
-  <div class="logo" data-act="home"><img src="icon-64.png" alt=""><b>체험첵!</b><small>Field-Check!</small></div>
-  <span class="mode" id="mode" hidden>체험 모드</span>
-  <div class="sp"></div>
-  <span class="who" id="who"></span>
-  <button class="hbtn" id="logout" data-act="logout" hidden>로그아웃</button>
-</div></header>
 <main id="main"></main>
+
 <div class="ov" id="ov"><div class="md" id="md"></div></div>
 <div class="toast" id="toast"></div>
 
@@ -379,12 +375,9 @@ function openModal(html, wide) { $('#md').className = 'md' + (wide ? ' wide' : '
 function closeModal() { $('#ov').classList.remove('show'); $('#md').innerHTML = ''; draft = null; ldraft = null; rdraft = null; cdraft = null; }
 
 // ---------- 시작 ----------
-if (S.mode === 'demo') $('#mode').hidden = false;
 S.onUser(async u => {
   user = u;
-  if (!u) { $('#who').textContent = ''; $('#logout').hidden = true; return renderLogin(); }
-  $('#who').textContent = u.displayName || u.email || '';
-  $('#logout').hidden = S.mode === 'demo';
+  if (!u) return renderLogin();
   const joined = await handleJoin();
   await loadEvents();
   const id = joined ? [0, joined] : location.hash.match(/^#e=(.+)$/);
@@ -424,7 +417,9 @@ function renderHome() {
   $('#main').innerHTML = `
     <div class="rowb hero"><img src="logo.png" alt="체험첵! Field-Check!"><div style="flex:1;min-width:0"><div class="eyebrow">Field-Check!</div><h2>나의 체험학습</h2>
       <p>현장체험학습·수학여행 준비부터 당일 점검, 사후 설문까지</p></div>
-      <button class="btn pri" data-act="new-event">+ 새 체험학습</button></div>
+      <div class="hside">
+        <div class="hwho">${S.mode === 'demo' ? '<span class="mode">체험 모드</span>' : ''}<span class="who">${esc(user.displayName || user.email || '')}</span>${S.mode === 'demo' ? '' : '<button class="hbtn" data-act="logout">로그아웃</button>'}</div>
+        <button class="btn pri" data-act="new-event">+ 새 체험학습</button></div></div>
     ${events.length ? '' : `<div class="card empty"><b>아직 만든 체험학습이 없어요</b>위의 '새 체험학습'을 눌러 첫 계획을 만들어 보세요.<br>출발일만 넣으면 준비 일정이 날짜별로 자동으로 정리돼요.</div>`}
     ${up.length ? `<div class="grid">${up.map(card).join('')}</div>` : ''}
     ${past.length ? `<h3 style="margin:26px 0 10px;font-size:15px;color:var(--sub)">지난 체험학습</h3><div class="grid">${past.map(card).join('')}</div>` : ''}`;
