@@ -242,6 +242,15 @@ JSON으로만 답해: {"rules":["...","..."]}`, 0.4);
     const list = (r.rules || []).map(String).filter(Boolean); if (!list.length) throw new Error('수칙을 만들지 못했어요');
     setNote('rules', list.join('\n'));
   },
+  async memo(A) {
+    const r = await A.ask(`너는 초등학교 선생님을 돕는 체험학습 안내 도우미야. 학생과 가족이 출발 전에 챙길 "전달 사항"을 써 줘.
+${JSON.stringify({ ...tripBrief(), 준비물: D.plist ? D.plist.items.filter(i => !i.leave).map(i => i.t) : [], 가져오지않을것: D.plist ? D.plist.items.filter(i => i.leave).map(i => i.t) : [] }, null, 1)}
+조건: 6~9개 항목, 한 줄씩, 학생과 가족이 함께 읽기 쉬운 "~해요/~주세요" 말투. 일정과 장소에 맞춰 복장(많이 걷는 곳이면 편한 운동화 등), 용돈, 휴대폰 사용, 멀미약·개인 약, 모이는 시간과 장소, 돌아오는 시간과 마중, 결석·아플 때 연락처럼 실제로 챙길 것 위주로. 준비물 목록과 같은 내용을 반복하지 마.
+금액, 전화번호, 선생님 이름처럼 학교마다 다른 값은 지어내지 말고 "(  )원", "(담임 선생님 연락처)"처럼 빈칸으로 남겨.
+JSON으로만 답해: {"items":["...","..."]}`, 0.4);
+    const list = (r.items || []).map(String).filter(Boolean); if (!list.length) throw new Error('전달 사항을 만들지 못했어요');
+    setNote('guideMemo', list.map(x => '- ' + x.replace(/^[-·•]\s*/, '')).join('\n'));
+  },
   async letter(A) {
     const pk = D.plist ? D.plist.items.filter(i => i.imp).map(i => i.t) : [];
     const r = await A.ask(`너는 초등학교 선생님을 돕는 가정통신문 도우미야. 아래 체험학습을 학부모님께 안내하는 글을 써 줘.
@@ -387,7 +396,7 @@ function guide() {
     ${sec('safe', '안전 수칙과 안전 교육', rules + safety)}
     ${sec('group', '모둠 활동', group)}
     ${sec('qr', 'QR 모음', qrHtml)}
-    ${sec('memo', '선생님이 전하는 말', noteBox('guideMemo', '예: 용돈은 2만 원 이내로 가져와요. 급한 일은 담임 선생님께 연락해 주세요.', 4))}
+    ${sec('memo', '선생님이 전하는 말', `<p class="hint screen" style="margin-top:0">${aiBtn('memo', 'AI로 전달 사항 쓰기')} 복장, 용돈, 휴대폰, 멀미약, 모이는 곳처럼 챙길 점을 일정에 맞춰 정리해 줘요. 금액이나 연락처는 직접 고쳐 주세요.</p>` + noteBox('guideMemo', '예: 용돈은 2만 원 이내로 가져와요. 급한 일은 담임 선생님께 연락해 주세요.', 4))}
     <div class="foot">체험첵! Field-Check!에서 만들었어요.</div>
   </div>`;
 }
