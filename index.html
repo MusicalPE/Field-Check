@@ -490,12 +490,13 @@ a.chip{text-decoration:none;display:inline-block}
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="config.js?v=1.3.1"></script>
-<script src="store.js?v=1.2.0"></script>
+<script src="config.js?v=1.4.0"></script>
+<script src="store.js?v=1.4.0"></script>
+<script src="aikey.js?v=1.4.0"></script>
 <script src="xlsx-export.js?v=1.2.0"></script>
 <script src="wx.js?v=1.2.0"></script>
-<script src="kakao-config.js?v=1.3.1"></script>
-<script type="module" src="ai.js?v=1.3.7"></script>
+<script src="kakao-config.js?v=1.4.0"></script>
+<script type="module" src="ai.js?v=1.4.0"></script>
 <script>
 const S = window.Store;
 const $ = s => document.querySelector(s);
@@ -780,6 +781,7 @@ async function openEvent(id, keepTab) {
     cur.classes = classMap(classesOf(cur)); await saveCur('classes'); await syncChildren();
   }
   history.replaceState(null, '', '#e=' + id);
+  if (window.AIK) AIK.init(user, cur);
   if (!keepTab) { plist = null; pcount = 0; }
   renderEvent();
   plist = await S.getList(id, 'student');
@@ -1650,8 +1652,12 @@ async function installGo() {
   try { const c = await installEvt.userChoice; if (c && c.outcome === 'accepted') lsSet(IKEY, '1'); } catch (e) {}
   installEvt = null; if (!cur) renderHome();
 }
-const APP_VERSION = '1.3.0';
+const APP_VERSION = '1.4.0';
 const NEWS = [
+  { v: '1.4.0', d: '2026. 11. 9.', items: [
+    'AI 도우미 무료 체험: 다른 선생님은 AI 버튼을 10번까지 무료로 쓰고, 그 뒤에는 [설정] > [AI 도우미]에서 내 AI 키를 넣어 계속 써요',
+    '사전 안내 자료: 선생님이 전하는 말도 AI 초안',
+  ] },
   { v: '1.3.0', d: '2026. 10. 28.', items: [
     'AI 도우미: 활동지에서 일정표 장소에 맞춘 모둠 조사 질문·현장 미션 만들기',
     'AI 도우미: 사전 안내 자료의 학부모 안내문과 장소 맞춤 안전 수칙',
@@ -1698,6 +1704,7 @@ function setTab(inModal) {
     ${row('자료 공유하기', '이 체험학습의 틀(업무, 일정, 준비물, 안전 교육, 설문, 활동지)을 짧은 주소와 QR로 다른 선생님께 보내요.', '<button class="chip" data-act="share">보내기</button>')}
     ${row('업데이트 소식', `지금 ${APP_VERSION}`, `<button class="chip" data-act="set-news">${setOpen.news ? '닫기' : '보기'}</button>`)}${news}
     ${row('개인정보처리방침', '어떤 정보를 어디에 두는지 알려 드려요.', '<a class="chip" href="privacy.html" target="_blank" rel="noopener">보기</a>')}
+    ${window.AIK && AIK.showKey() ? row('AI 도우미', esc(AIK.status()), `<button class="chip" data-act="ai-key">${AIK.key() ? 'AI 키 바꾸기' : 'AI 키 넣기'}</button>`) : ''}
     ${row('만든 사람 · 사용 조건', '음악적체육인 · 학교와 선생님은 무료로 써요. 판매·광고·이름 바꿔 배포는 안 돼요.', '<a class="chip" href="https://github.com/MusicalPE/Field-Check/blob/main/LICENSE" target="_blank" rel="noopener">보기</a>')}
     ${STANDALONE ? '' : row('앱으로 설치하기', '홈 화면에 체험첵! 아이콘을 만들어요.', `<button class="chip" data-act="set-install">${installEvt ? '설치' : (setOpen.install ? '닫기' : '설치 방법')}</button>`) + inst}
     ${S.mode === 'demo' ? '' : row('로그아웃', esc(user.email || user.displayName || ''), '<button class="chip" data-act="logout">로그아웃</button>')}
@@ -1793,8 +1800,9 @@ function renderSheetForm() {
 const AI_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true" style="width:15px;height:15px;margin-right:4px;vertical-align:-2px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M12 3l1.8 4.6L18 9.4l-4.2 1.8L12 16l-1.8-4.8L6 9.4l4.2-1.8z"/><path d="M19 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></svg>';
 function aiReady() {
   const A = window.FCAI;
-  if (!A || A.state === 'loading') { toast('AI를 준비하는 중이에요. 잠시 뒤 다시 눌러 주세요'); return null; }
-  if (A.state !== 'ready') { toast(A.why || 'AI를 쓸 수 없어요', 5000); return null; }
+  if (!A || !A.check || !window.AIK) { toast('AI를 준비하는 중이에요. 잠시 뒤 다시 눌러 주세요'); return null; }
+  const c = A.check();
+  if (!c.ok) { if (c.need) AIK.openKey(`무료 체험 ${window.AI_TRIAL}번을 다 썼어요`); else toast(c.why, 5000); return null; }
   return A;
 }
 async function aiSheet(btn) {
@@ -1825,7 +1833,7 @@ async function aiSheetRun(A, prompt, btn, old) {
     if (hdraft.questions.some(q => (q.text || '').trim()) && !confirm('지금 질문을 AI가 만든 질문으로 바꿀까요?')) { btn.disabled = false; btn.innerHTML = old; return; }
     hdraft.questions = qs; if (r.intro) hdraft.intro = String(r.intro);
     if (r.title && hdraft._new) hdraft.title = String(r.title);
-    renderSheetForm(); toast('AI가 만든 질문을 넣었어요. 확인하고 고쳐 주세요', 4000);
+    renderSheetForm(); toast('AI가 만든 질문을 넣었어요. 확인하고 고쳐 주세요' + (A.lastNote ? ' · ' + A.lastNote : ''), 5000);
   } catch (e) { console.error(e); toast(A.errorText(e), 5000); btn.disabled = false; btn.innerHTML = old; }
 }
 async function saveSheetForm() {
@@ -2036,6 +2044,8 @@ function planQR() {
 }
 
 if (/KAKAOTALK/i.test(navigator.userAgent)) setTimeout(() => toast('카카오톡 안에서는 로그인이 안 돼요. 기본 브라우저로 열고 있어요. 안 열리면 오른쪽 위 [⋮] → [다른 브라우저로 열기]를 눌러 주세요.'), 900);
+document.addEventListener('aik-change', ev => { if (ev.detail) toast(ev.detail, 4000); if (cur) refreshSet(); });
+
 // ---------- 모바일: 섹션 제목을 누르면 접기 ----------
 const FOLD_MQ = matchMedia('(max-width:640px)');
 const foldKey = h => (h.firstChild && h.firstChild.textContent || h.textContent).trim();
@@ -2217,6 +2227,7 @@ document.addEventListener('click', async ev => {
       }
       case 'install-go': closeModal(); await installGo(); break;
       case 'set-modal': setModal(); break;
+      case 'ai-key': AIK.openKey(); break;
       case 'set-news': setOpen.news = !setOpen.news; refreshSet(); break;
       case 'set-install': if (installEvt) await installGo(); else { setOpen.install = !setOpen.install; refreshSet(); } break;
       case 'set-del': setOpen.del = true; refreshSet(); break;

@@ -27,7 +27,7 @@
 
 - 파이어베이스 설정: `설정_안내.txt`, 보안 규칙 `파이어베이스_규칙.txt`
 - 카카오 장소 검색 키: `kakao-config.js`
-- AI 도우미: 파이어베이스 AI Logic과 App Check 사이트 키 (`설정_안내.txt` 5단계, `config.js`)
+- AI 도우미: 파이어베이스 AI Logic과 App Check 사이트 키 (`설정_안내.txt` 5단계, `config.js`). 다른 선생님은 `AI_TRIAL`번 무료 체험 뒤 자기 Gemini API 키를 넣어 써요.
 
 ## 사용 조건 · 저작권
 

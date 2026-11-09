@@ -119,6 +119,9 @@
     S.removeView = async (eid, sid, c, n) => vwCol(eid, sid).doc(c + '_' + n).delete();
     S.removeViewLegacy = async (eid, sid, docId) => vwCol(eid, sid).doc(docId).delete();
     // 선생님끼리 자료 공유 (체험학습 틀)
+    // 선생님 개인 설정 (AI 무료 체험 횟수, 내 AI 키) — 본인만 읽고 씀
+    S.getTeacher = async uid => { const d = await db.collection('teachers').doc(uid).get(); return d.exists ? d.data() : {}; };
+    S.saveTeacher = async (uid, data) => db.collection('teachers').doc(uid).set(data, { merge: true });
     S.saveShare = async (code, data) => db.collection('shares').doc(code).set(data);
     S.getShare = async code => { const d = await db.collection('shares').doc(code).get(); return d.exists ? d.data() : null; };
     // 학생도 보는 일정표·날씨 지역
@@ -293,6 +296,8 @@
       d.responses[k][uid] = { answers, at: Date.now() };
       save(d);
     };
+    S.getTeacher = async uid => clone((load().teachers || {})[uid] || {});
+    S.saveTeacher = async (uid, data) => { const d = load(); d.teachers = d.teachers || {}; d.teachers[uid] = { ...(d.teachers[uid] || {}), ...data }; save(d); };
     S.saveShare = async (code, data) => { const d = load(); d.shares = d.shares || {}; d.shares[code] = data; save(d); };
     S.getShare = async code => { const x = (load().shares || {})[code]; return x ? clone(x) : null; };
     S.getPub = async eid => { const x = load().pub[eid]; return x ? clone(x) : null; };

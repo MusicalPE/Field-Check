@@ -111,10 +111,11 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="config.js?v=1.3.1"></script>
-<script src="store.js?v=1.2.0"></script>
+<script src="config.js?v=1.4.0"></script>
+<script src="store.js?v=1.4.0"></script>
+<script src="aikey.js?v=1.4.0"></script>
 <script src="wx.js?v=1.2.0"></script>
-<script type="module" src="ai.js?v=1.3.7"></script>
+<script type="module" src="ai.js?v=1.4.0"></script>
 <script>
 const S = window.Store;
 const app = document.getElementById('app');
@@ -152,6 +153,7 @@ S.onUser(async u => {
     const evs = await S.listEvents(u.uid);
     const ev = evs.find(e => e.id === eid);
     if (!ev) return msg('체험학습을 찾을 수 없어요. 함께하는 선생님만 볼 수 있어요.');
+    if (window.AIK) await AIK.init(u, ev);
     D.ev = ev; D.classes = classesOf(ev); D.total = D.classes.reduce((a, c) => a + Number(c.total || 0), 0); D.days = tripDays(ev);
     const [pub, plist, roll, surveys, sheets, safeties] = await Promise.all([S.getPub(eid), S.getList(eid, 'student'), S.getRoll(eid), S.listSurveys(eid), S.listSheets(eid), S.listSafety(eid)]);
     Object.assign(D, { pub, plist, roll, surveys: surveys.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0)), sheets: sheets.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0)), safeties });
@@ -199,8 +201,9 @@ const aiBtn = (k, label) => `<button class="draft ai" data-ai="${k}">${AI_SVG}${
 function toast(t, ms = 3000) { let el = document.querySelector('.toast'); if (!el) { el = document.createElement('div'); el.className = 'toast'; document.body.appendChild(el); } el.textContent = t; el.classList.add('show'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('show'), ms); }
 function aiReady() {
   const A = window.FCAI;
-  if (!A || A.state === 'loading') { toast('AI를 준비하는 중이에요. 잠시 뒤 다시 눌러 주세요'); return null; }
-  if (A.state !== 'ready') { toast(A.why || 'AI를 쓸 수 없어요', 5000); return null; }
+  if (!A || !A.check || !window.AIK) { toast('AI를 준비하는 중이에요. 잠시 뒤 다시 눌러 주세요'); return null; }
+  const c = A.check();
+  if (!c.ok) { if (c.need) AIK.openKey(`무료 체험 ${window.AI_TRIAL}번을 다 썼어요`); else toast(c.why, 5000); return null; }
   return A;
 }
 function setNote(key, text, ask = true) {
@@ -294,10 +297,12 @@ app.addEventListener('click', async ev => {
   const A = aiReady(); if (!A) return;
   const old = b.innerHTML; b.disabled = true; const t0 = Date.now(); b.textContent = 'AI가 쓰는 중... 0초';
   const tick = setInterval(() => { b.textContent = `AI가 쓰는 중... ${Math.round((Date.now() - t0) / 1000)}초`; }, 1000);
-  try { await AIJOBS[b.dataset.ai](A); toast('AI 초안을 넣었어요. 꼭 읽어 보고 고쳐 주세요', 4000); }
+  try { await AIJOBS[b.dataset.ai](A); toast('AI 초안을 넣었어요. 꼭 읽어 보고 고쳐 주세요' + (A.lastNote ? ' · ' + A.lastNote : ''), 5000); }
   catch (e) { console.error(e); toast(A.errorText ? A.errorText(e) : String(e.message || e), 5000); }
   clearInterval(tick); if (b.isConnected) { b.disabled = false; b.innerHTML = old; }
 });
+
+document.addEventListener('aik-change', ev => { if (ev.detail) toast(ev.detail, 4000); });
 
 // ---------- 섹션 켜고 끄기 ----------
 const hidden = { guide: new Set(), report: new Set() };
