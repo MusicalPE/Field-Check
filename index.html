@@ -491,7 +491,8 @@ a.chip{text-decoration:none;display:inline-block}
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="config.js?v=1.4.1"></script>
-<script src="store.js?v=1.4.0"></script>
+<script src="store.js?v=1.4.2"></script>
+<script src="preview.js?v=1.0.0"></script>
 <script src="aikey.js?v=1.4.0"></script>
 <script src="xlsx-export.js?v=1.2.0"></script>
 <script src="wx.js?v=1.2.0"></script>
@@ -661,7 +662,7 @@ function renderHome() {
     <div class="rowb hero"><img src="logo.png" alt="체험첵! Field-Check!"><div style="flex:1;min-width:0"><div class="eyebrow">Field-Check!</div><h2>나의 체험학습</h2>
       <p>현장체험학습·수학여행 준비부터 당일 점검, 사후 설문까지</p></div>
       <div class="hside">
-        <div class="hwho">${S.mode === 'demo' ? '<span class="mode">체험 모드</span>' : ''}<span class="who">${esc(user.displayName || user.email || '')}</span>${S.mode === 'demo' ? '' : '<button class="hbtn" data-act="logout">로그아웃</button>'}</div>
+        <div class="hwho">${S.mode === 'demo' ? `<span class="mode">${S.preview ? '미리보기' : '체험 모드'}</span>` : ''}<span class="who">${esc(user.displayName || user.email || '')}</span>${S.mode === 'demo' ? '' : '<button class="hbtn" data-act="logout">로그아웃</button>'}</div>
         <button class="btn pri" data-act="new-event">+ 새 체험학습</button></div></div>
     ${installBanner()}
     ${events.length ? '' : `<div class="card empty"><b>아직 만든 체험학습이 없어요</b>위의 '새 체험학습'을 눌러 첫 계획을 만들어 보세요.<br>출발일만 넣으면 준비 일정이 날짜별로 자동으로 정리돼요.</div>`}

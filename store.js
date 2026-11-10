@@ -1,8 +1,22 @@
 // 저장 계층: 파이어베이스 설정이 있으면 파이어베이스, 없으면 체험 모드(localStorage)
 (function () {
   const cfg = window.FIREBASE_CONFIG || {};
-  const useFb = !!(cfg.apiKey && typeof firebase !== 'undefined');
-  const S = { mode: useFb ? 'firebase' : 'demo' };
+  /* 미리보기(?demo): 로그인 없이 지어낸 체험학습을 둘러봄. 이 기기의 따로 둔 자리에만 저장하고
+     index.html?demo 로 다시 들어오면 처음 모습으로 돌아감 (preview.js 가 채움)
+     - 같은 창에서 다른 화면으로 옮겨 가도 이어지게 sessionStorage 에 표시를 둠
+     - 학생 화면을 새 탭으로 열어도 미리보기 체험학습 주소(e=pv…)면 미리보기로 엶 */
+  const PV_KEY = 'fieldtrip-preview-v1', PV_FLAG = 'fieldtrip-preview';
+  const preview = (() => {
+    const q = new URLSearchParams(location.search);
+    if (q.has('demo')) { try { sessionStorage.setItem(PV_FLAG, '1'); } catch (e) {} return true; }
+    try { if (sessionStorage.getItem(PV_FLAG)) return true; } catch (e) {}
+    const e = q.get('e');
+    if (e && /^pv/.test(e)) { try { return !!((JSON.parse(localStorage.getItem(PV_KEY)) || {}).events || {})[e]; } catch (er) {} }
+    return false;
+  })();
+  const useFb = !preview && !!(cfg.apiKey && typeof firebase !== 'undefined');
+  const S = { mode: useFb ? 'firebase' : 'demo', preview };
+  S.endPreview = () => { try { sessionStorage.removeItem(PV_FLAG); } catch (e) {} };
   const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   S.newId = newId;
 
@@ -183,7 +197,7 @@
       rsCol(eid, sid).doc(uid).set({ answers, at: firebase.firestore.FieldValue.serverTimestamp() });
   } else {
     // ---- 체험 모드 ----
-    const KEY = 'fieldtrip-demo-v1';
+    const KEY = preview ? PV_KEY : 'fieldtrip-demo-v1';
     const load = () => {
       let d = {};
       try { d = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) {}
@@ -198,9 +212,18 @@
     const clone = o => JSON.parse(JSON.stringify(o));
     // 체험 모드에서 두 선생님을 시험할 때: 주소 끝에 ?demo=b 를 붙이면 다른 선생님으로 들어와요
     const dParam = new URLSearchParams(location.search).get('demo');
-    const demoUser = dParam ? { uid: 'demo-' + dParam, displayName: '체험 선생님 ' + dParam.toUpperCase() } : { uid: 'demo-teacher', displayName: '체험 사용자' };
+    const demoUser = preview ? { uid: 'pv-teacher', displayName: '예시 선생님' }
+      : dParam ? { uid: 'demo-' + dParam, displayName: '체험 선생님 ' + dParam.toUpperCase() } : { uid: 'demo-teacher', displayName: '체험 사용자' };
+    S.demoUser = demoUser;
 
-    S.onUser = cb => setTimeout(() => cb(demoUser), 0);
+    S.onUser = cb => setTimeout(async () => {
+      // index.html?demo 로 들어오면 지어낸 체험학습을 새로 채움
+      if (preview && new URLSearchParams(location.search).has('demo') && window.FC_PREVIEW_SEED) {
+        try { localStorage.removeItem(KEY); } catch (e) {}
+        try { await window.FC_PREVIEW_SEED(S, demoUser); } catch (e) { console.warn('미리보기 준비', e); }
+      }
+      cb(demoUser);
+    }, 0);
     S.signInGoogle = async () => {};
     S.signOut = async () => {};
     S.studentLogin = async () => {
