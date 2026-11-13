@@ -29,6 +29,12 @@
 - 카카오 장소 검색 키: `kakao-config.js`
 - AI 도우미: 파이어베이스 AI Logic과 App Check 사이트 키 (`설정_안내.txt` 5단계, `config.js`). 다른 선생님은 `AI_TRIAL`번 무료 체험 뒤 자기 Gemini API 키를 넣어 써요.
 
+## 올리기 전 시험
+
+- 단순 수정: `python3 tests/check.py` (코드 검사)
+- 기능 수정: `python3 tests/full_test.py` (코드 검사 + 화면 전체 시험)
+- 자세한 규칙: `tests/시험_안내.txt`
+
 ## 사용 조건 · 저작권
 
 이 앱과 로고·안내 글의 저작권은 **음악적체육인**에게 있습니다. 자세한 내용은 [LICENSE](LICENSE) 파일을 봐 주세요.
