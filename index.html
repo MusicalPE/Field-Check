@@ -633,7 +633,7 @@ S.onUser(async u => {
 function renderLogin() {
   setNav(false);
   $('#main').innerHTML = `<div class="login card">
-    <div style="display:flex;justify-content:flex-start;margin:-10px 0 4px">${FCHelp.btn()}</div>
+    <div style="display:flex;justify-content:flex-end;margin:-10px 0 4px">${FCHelp.btn()}</div>
     <img src="logo.png" alt="체험첵! Field-Check!" class="login-logo">
     <p>현장체험학습·수학여행 준비부터 사후 설문까지 한곳에서 챙겨요.</p>
     <button class="btn pri" data-act="login">구글 계정으로 시작하기</button>
@@ -826,7 +826,7 @@ function renderEvent() {
   setNav(true);
   const tabs = [['pre', '사전', '준비'], ['day', '당일', '현장'], ['post', '사후', '정리']];
   $('#main').innerHTML = `
-    <div class="rowb evtop"><div style="display:flex;align-items:center;gap:6px">${FCHelp.btn()}<button class="btn sm" data-act="home">← 목록</button></div><div style="display:flex;gap:6px"><button class="btn sm" data-act="edit-event">정보 고치기</button>${S.mode === 'demo' ? '' : '<button class="btn sm" data-act="logout">로그아웃</button>'}</div></div>
+    <div class="rowb evtop"><button class="btn sm" data-act="home">← 목록</button><div style="display:flex;align-items:center;gap:6px;margin-left:auto">${FCHelp.btn()}<button class="btn sm" data-act="edit-event">정보 고치기</button>${S.mode === 'demo' ? '' : '<button class="btn sm" data-act="logout">로그아웃</button>'}</div></div>
     <div class="card evhead">
       <div style="min-width:0"><div class="eyebrow"><span class="badge">${esc(e.kind)}</span>${multiClass() ? `<span class="badge gray">${classesOf(e).length}개 반</span>` : ''}</div>
       <h2>${esc(e.title)}</h2>
@@ -1657,7 +1657,7 @@ async function installGo() {
   try { const c = await installEvt.userChoice; if (c && c.outcome === 'accepted') lsSet(IKEY, '1'); } catch (e) {}
   installEvt = null; if (!cur) renderHome();
 }
-const APP_VERSION = '1.5.0';
+const APP_VERSION = '1.5.1';
 const NEWS = [
   { v: '1.5.0', d: '2026. 11. 20.', items: [
     '사용 안내: 화면 위쪽과 설정의 "사용 안내"를 누르면 체험첵! 간략 사용법이 떠요',
