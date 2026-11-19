@@ -421,7 +421,9 @@ a.chip{text-decoration:none;display:inline-block}
 .morelist button small{display:block;font-weight:400;font-size:12.5px;color:var(--sub)}
 .morelist button.warn{color:var(--warn)}
 @media (max-width:640px){
-  body.in-event .tabs,body.in-event .evtop{display:none}
+  body.in-event .tabs{display:none}
+  body.in-event .evtop{margin:-6px 0 2px}
+  body.in-event .evtop .btn{display:none}
   body.in-event main{padding-bottom:calc(120px + env(safe-area-inset-bottom,0px))}
   body.in-event .toast{bottom:calc(108px + env(safe-area-inset-bottom,0px))}
   body.in-event .tabbar{display:grid;grid-template-columns:1fr 1fr auto 1fr 1fr;align-items:end;position:fixed;left:0;right:0;bottom:0;z-index:40;
@@ -494,6 +496,7 @@ a.chip{text-decoration:none;display:inline-block}
 <script src="store.js?v=1.4.2"></script>
 <script src="preview.js?v=1.0.0"></script>
 <script src="aikey.js?v=1.4.0"></script>
+<script src="help.js?v=1.5.0"></script>
 <script src="xlsx-export.js?v=1.2.0"></script>
 <script src="wx.js?v=1.2.0"></script>
 <script src="kakao-config.js?v=1.4.1"></script>
@@ -630,6 +633,7 @@ S.onUser(async u => {
 function renderLogin() {
   setNav(false);
   $('#main').innerHTML = `<div class="login card">
+    <div style="display:flex;justify-content:flex-start;margin:-10px 0 4px">${FCHelp.btn()}</div>
     <img src="logo.png" alt="체험첵! Field-Check!" class="login-logo">
     <p>현장체험학습·수학여행 준비부터 사후 설문까지 한곳에서 챙겨요.</p>
     <button class="btn pri" data-act="login">구글 계정으로 시작하기</button>
@@ -662,7 +666,7 @@ function renderHome() {
     <div class="rowb hero"><img src="logo.png" alt="체험첵! Field-Check!"><div style="flex:1;min-width:0"><div class="eyebrow">Field-Check!</div><h2>나의 체험학습</h2>
       <p>현장체험학습·수학여행 준비부터 당일 점검, 사후 설문까지</p></div>
       <div class="hside">
-        <div class="hwho">${S.mode === 'demo' ? `<span class="mode">${S.preview ? '미리보기' : '체험 모드'}</span>` : ''}<span class="who">${esc(user.displayName || user.email || '')}</span>${S.mode === 'demo' ? '' : '<button class="hbtn" data-act="logout">로그아웃</button>'}</div>
+        <div class="hwho">${FCHelp.btn()}${S.mode === 'demo' ? `<span class="mode">${S.preview ? '미리보기' : '체험 모드'}</span>` : ''}<span class="who">${esc(user.displayName || user.email || '')}</span>${S.mode === 'demo' ? '' : '<button class="hbtn" data-act="logout">로그아웃</button>'}</div>
         <button class="btn pri" data-act="new-event">+ 새 체험학습</button></div></div>
     ${installBanner()}
     ${events.length ? '' : `<div class="card empty"><b>아직 만든 체험학습이 없어요</b>위의 '새 체험학습'을 눌러 첫 계획을 만들어 보세요.<br>출발일만 넣으면 준비 일정이 날짜별로 자동으로 정리돼요.</div>`}
@@ -822,7 +826,7 @@ function renderEvent() {
   setNav(true);
   const tabs = [['pre', '사전', '준비'], ['day', '당일', '현장'], ['post', '사후', '정리']];
   $('#main').innerHTML = `
-    <div class="rowb evtop"><button class="btn sm" data-act="home">← 목록</button><div style="display:flex;gap:6px"><button class="btn sm" data-act="edit-event">정보 고치기</button>${S.mode === 'demo' ? '' : '<button class="btn sm" data-act="logout">로그아웃</button>'}</div></div>
+    <div class="rowb evtop"><div style="display:flex;align-items:center;gap:6px">${FCHelp.btn()}<button class="btn sm" data-act="home">← 목록</button></div><div style="display:flex;gap:6px"><button class="btn sm" data-act="edit-event">정보 고치기</button>${S.mode === 'demo' ? '' : '<button class="btn sm" data-act="logout">로그아웃</button>'}</div></div>
     <div class="card evhead">
       <div style="min-width:0"><div class="eyebrow"><span class="badge">${esc(e.kind)}</span>${multiClass() ? `<span class="badge gray">${classesOf(e).length}개 반</span>` : ''}</div>
       <h2>${esc(e.title)}</h2>
@@ -1653,8 +1657,11 @@ async function installGo() {
   try { const c = await installEvt.userChoice; if (c && c.outcome === 'accepted') lsSet(IKEY, '1'); } catch (e) {}
   installEvt = null; if (!cur) renderHome();
 }
-const APP_VERSION = '1.4.2';
+const APP_VERSION = '1.5.0';
 const NEWS = [
+  { v: '1.5.0', d: '2026. 11. 20.', items: [
+    '사용 안내: 화면 위쪽과 설정의 "사용 안내"를 누르면 체험첵! 간략 사용법이 떠요',
+  ] },
   { v: '1.4.0', d: '2026. 11. 9.', items: [
     'AI 도우미 무료 체험: 다른 선생님은 AI 버튼을 3번까지 무료로 쓰고, 그 뒤에는 [설정] > [AI 도우미]에서 내 AI 키를 넣어 계속 써요',
     '사전 안내 자료: 선생님이 전하는 말도 AI 초안',
@@ -1709,6 +1716,7 @@ function setTab(inModal) {
     ${row('만든 사람 · 사용 조건', '음악적체육인 · 학교와 선생님은 무료로 써요. 판매·광고·이름 바꿔 배포는 안 돼요.', '<a class="chip" href="https://github.com/MusicalPE/Field-Check/blob/main/LICENSE" target="_blank" rel="noopener">보기</a>')}
     ${STANDALONE ? '' : row('앱으로 설치하기', '홈 화면에 체험첵! 아이콘을 만들어요.', `<button class="chip" data-act="set-install">${installEvt ? '설치' : (setOpen.install ? '닫기' : '설치 방법')}</button>`) + inst}
     ${S.mode === 'demo' ? '' : row('로그아웃', esc(user.email || user.displayName || ''), '<button class="chip" data-act="logout">로그아웃</button>')}
+    ${row('사용 안내', '체험첵!을 쓰는 순서를 짧게 정리했어요.', FCHelp.btn())}
     ${danger}
   </div>${inModal ? '' : '</div>'}`;
 }

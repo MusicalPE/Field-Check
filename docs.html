@@ -35,6 +35,7 @@
   .tools{position:sticky;top:0;z-index:5;display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap;padding:12px;background:rgba(233,238,229,.94);backdrop-filter:blur(6px)}
   .tools button,.tools a{font:inherit;font-weight:800;border-radius:999px;padding:9px 18px;border:1.5px solid var(--line);background:#fff;color:var(--ink);cursor:pointer;text-decoration:none}
   .tools .pri{background:var(--pri);border-color:var(--pri);color:#fff}
+  .tools .fchelp{border:0;background:none;border-radius:0;padding:0 6px}
   .tools .on{background:var(--pri-soft);border-color:var(--pri);color:var(--pri)}
   .parts{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;padding:0 12px 10px;max-width:900px;margin:0 auto}
   .parts label{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:800;background:#fff;border:1.5px solid var(--line);border-radius:999px;padding:5px 12px;cursor:pointer}
@@ -101,7 +102,7 @@
 </style>
 </head>
 <body>
-<div class="tools"><a href="./" id="back">← 체험첵!</a>
+<div class="tools"><button type="button" class="fchelp" data-help><span class="fchq" aria-hidden="true">?</span>사용 안내</button><a href="./" id="back">← 체험첵!</a>
   <button id="t-guide">사전 안내 자료</button><button id="t-report">결과 보고서</button>
   <button class="pri" id="print">인쇄 · PDF로 저장</button></div>
 <div class="parts" id="parts"></div>
@@ -114,6 +115,7 @@
 <script src="config.js?v=1.4.1"></script>
 <script src="store.js?v=1.4.2"></script>
 <script src="aikey.js?v=1.4.0"></script>
+<script src="help.js?v=1.5.0"></script>
 <script src="wx.js?v=1.2.0"></script>
 <script type="module" src="ai.js?v=1.4.0"></script>
 <script>

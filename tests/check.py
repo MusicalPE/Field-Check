@@ -42,6 +42,9 @@ for h in HTML:
         handled = set(re.findall(r"case '([a-z0-9-]+)'", scripts)) | set(re.findall(r"act === '([a-z0-9-]+)'", scripts)) \
             | set(re.findall(r"dataset\.act === '([a-z0-9-]+)'", scripts)) | set(re.findall(r"\[data-act=\"?([a-z0-9-]+)\"?\]", scripts))
         for a in sorted(acts - handled): bad(f'{h}: data-act="{a}" 단추를 처리하는 곳이 없어요')
+    # 사용 안내 단추(data-help) → help.js 가 불려 있는지
+    if 'data-help' in src or 'FCHelp.' in src:
+        if 'help.js' not in src: bad(f'{h}: 사용 안내 단추가 있는데 help.js 를 불러오지 않아요')
     # docs.html 의 AI 단추 → AIJOBS
     ai = set(re.findall(r"aiBtn\('([a-z]+)'", src))
     if ai:
